@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Set
 
-from embedding_manager import EmbeddingManager
+from graph.embedding_manager import EmbeddingManager
 
 import numpy as np
 

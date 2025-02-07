@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from embedding_manager import EmbeddingManager
+from graph.embedding_manager import EmbeddingManager
 
 import numpy as np
 

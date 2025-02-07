@@ -1,8 +1,8 @@
 from typing import Dict, Set, List, Optional
 from collections import defaultdict
 
-from edge import Edge
-from vertex import Vertex
+from graph.edge import Edge
+from graph.vertex import Vertex
 
 import networkx as nx
 import matplotlib.pyplot as plt

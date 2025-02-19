@@ -27,3 +27,6 @@ class Vertex:
 
     def __repr__(self) -> str:
         return f"Vertex(concept='{self.concept}', words={self.words_of_concept})"
+    
+    def __hash__(self):
+        return hash((self.concept, self.words_of_concept))

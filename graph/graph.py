@@ -93,6 +93,15 @@ class Graph:
             raise ValueError(f"Vertex '{concept}' does not exist")
 
         return [self.edges[i] for i in self.vertex_edges[concept]]
+    
+    def get_edges(self) -> List[Edge]:
+        """
+        Get all edges connected to a vertex.
+
+        Returns:
+            List of all Edge objects in graph
+        """
+        return self.edges
 
     def __str__(self) -> str:
         return f"Graph(vertices={len(self.vertices)}, edges={len(self.edges)})"

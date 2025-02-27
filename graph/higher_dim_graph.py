@@ -21,7 +21,7 @@ class Graph:
         self.union_edges: List[UnionEdge] = []
 
     def add_union_edge(self, agent_group_1: List[Edge], agent_2: str,
-                       meaning: str, parent_subgraph: int) -> None:
+                       meaning: str, parent_subgraph: int = 1) -> None:
         """
         Add edges representing a definition with multiple parts.
 
@@ -42,9 +42,12 @@ class Graph:
                 if edge.agent_2 not in self.vertices:
                     self.add_vertex(edge.agent_2)
 
-            self.add_edge(edge.agent_1, edge.agent_2, edge.meaning,
-                          edge.edge_type, parent_subgraph)
-            edge_indices.add(edge_index)
+                if edge not in self.edges:
+                    self.add_edge(edge.agent_1, edge.agent_2, edge.meaning,
+                                edge.edge_type, parent_subgraph)
+                    edge_indices.add(edge_index)
+                else:
+                    edge_indices.add(self.edges.index(edge))
 
         add_individual_edges(agent_group_1)
 
@@ -109,7 +112,7 @@ class Graph:
         self.vertices[concept] = Vertex(concept, words_of_concept)
 
     def add_edge(self, agent_1: str, agent_2: str, meaning: str,
-                 edge_type: int, parent_subgraph: int) -> None:
+                 edge_type: int = 1, parent_subgraph: int = 1) -> None:
         """
         Add an edge between two vertices.
 

@@ -30,6 +30,9 @@ class Edge:
 
     def __repr__(self) -> str:
         return f"Edge({self.agent_1} <--[{self.meaning}]--> {self.agent_2})"
+    
+    def __eq__(self, value):
+        return self.agent_1 == value.agent_1 and self.agent_2 == value.agent_2 and self.meaning == value.meaning
 
     def __hash__(self) -> int:
         return hash((self.agent_1, self.agent_2, self.meaning, self.edge_type, self.parent_subgraph))

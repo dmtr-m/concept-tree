@@ -43,7 +43,7 @@ class Graph:
         self.vertices[concept] = Vertex(concept, words_of_concept)
 
     def add_edge(self, agent_1: str, agent_2: str, meaning: str,
-                 edge_type: int, parent_subgraph: int) -> None:
+                 edge_type: int = 1, parent_subgraph: int = 1) -> None:
         """
         Add an edge between two vertices.
 

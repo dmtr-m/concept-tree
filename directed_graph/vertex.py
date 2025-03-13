@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Set
 
-from graph.embedding_manager import EmbeddingManager
+from directed_graph.embedding_manager import EmbeddingManager
 
 import numpy as np
 
@@ -20,7 +20,8 @@ class Vertex:
     concept: str
     words_of_concept: List[str]
     embedding: np.ndarray = field(init=False)
-    adjacent_edges: Set[int] = field(default_factory=set)
+    incoming_edges: Set[int] = field(default_factory=set)
+    outgoing_edges: Set[int] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         self.embedding = EmbeddingManager.get_embedding(self.concept)

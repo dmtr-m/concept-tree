@@ -1,8 +1,8 @@
 from typing import Dict, Set, List, Optional
 from collections import defaultdict
 
-from graph.edge import Edge
-from graph.vertex import Vertex
+from directed_graph.edge import Edge
+from directed_graph.vertex import Vertex
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -42,7 +42,7 @@ class Graph:
 
         self.vertices[concept] = Vertex(concept, words_of_concept)
 
-    def add_edge(self, agent_1: str, agent_2: str, meaning: str,
+    def add_edge(self, agent_1: str, agent_2: str, label: str,
                  edge_type: int = 1, parent_subgraph: int = 1) -> None:
         """
         Add an edge between two vertices.
@@ -65,7 +65,7 @@ class Graph:
 
         # Create and store the edge
         edge_index = len(self.edges)
-        new_edge = Edge(agent_1, agent_2, meaning, edge_type, parent_subgraph)
+        new_edge = Edge(agent_1, agent_2, label, edge_type, parent_subgraph)
         self.edges.append(new_edge)
 
         # Update vertex adjacency information
@@ -73,8 +73,8 @@ class Graph:
         self.vertex_edges[agent_2].add(edge_index)
 
         # Update vertex objects
-        self.vertices[agent_1].adjacent_edges.add(edge_index)
-        self.vertices[agent_2].adjacent_edges.add(edge_index)
+        self.vertices[agent_1].outgoing_edges.add(edge_index)
+        self.vertices[agent_2].incoming_edges.add(edge_index)
 
     def get_vertex_edges(self, concept: str) -> List[Edge]:
         """
@@ -96,6 +96,48 @@ class Graph:
             raise ValueError(f"Vertex '{concept}' does not exist")
 
         return [self.edges[i] for i in self.vertex_edges[concept]]
+    
+    def get_incoming_edges(self, concept: str) -> List[Edge]:
+        """
+        Get all incoming edges for a given vertex.
+
+        Args:
+            concept: The vertex concept to get edges for
+
+        Returns:
+            List of Edge objects connected to the vertex
+
+        Raises:
+            ValueError: If the vertex doesn't exist
+        """
+        if not isinstance(concept, str):
+            raise ValueError("Concept must be a string")
+
+        if concept not in self.vertices:
+            raise ValueError(f"Vertex '{concept}' does not exist")
+
+        return [self.edges[i] for i in self.vertices[concept].incoming_edges]
+
+    def get_outgoing_edges(self, concept: str) -> List[Edge]:
+        """
+        Get all outgoing edges for a given vertex.
+
+        Args:
+            concept: The vertex concept to get edges for
+
+        Returns:
+            List of Edge objects connected to the vertex
+
+        Raises:
+            ValueError: If the vertex doesn't exist
+        """
+        if not isinstance(concept, str):
+            raise ValueError("Concept must be a string")
+
+        if concept not in self.vertices:
+            raise ValueError(f"Vertex '{concept}' does not exist")
+
+        return [self.edges[i] for i in self.vertices[concept].outgoing_edges]
 
     def get_edges(self) -> List[Edge]:
         """
@@ -105,11 +147,26 @@ class Graph:
             List of all Edge objects in graph
         """
         return self.edges
+    
+    @staticmethod
+    def build_from_vertices_and_edges(edges: List[Edge]):
+        graph = Graph()
 
-    def __str__(self) -> str:
-        return f"Graph(vertices={len(self.vertices)}, edges={len(self.edges)})"
+        for edge in edges:
+            if edge.agent_1 not in graph.vertices:
+                graph.add_vertex(edge.agent_1)
+            if edge.agent_2 not in graph.vertices:
+                graph.add_vertex(edge.agent_2)
+
+        for edge in edges:
+            graph.add_edge(edge.agent_1, edge.agent_2, edge.label, edge.edge_type, edge.parent_subgraph)
+
+        return graph
 
     def __repr__(self) -> str:
+        return f"Graph(vertices={len(self.vertices)}, edges={len(self.edges)})"
+
+    def __str__(self) -> str:
         return (f"Graph(\n\tvertices={list(self.vertices.values())},\n"
                 f"\tedges={self.edges}\n)")
 
@@ -124,7 +181,7 @@ def visualize_graph(graph: Graph) -> None:
 
     # Add edges with their meanings
     for edge in graph.edges:
-        G.add_edge(edge.agent_1, edge.agent_2, meaning=edge.meaning)
+        G.add_edge(edge.agent_1, edge.agent_2, meaning=edge.label)
 
     # Create the layout
     pos = nx.spring_layout(G)

@@ -163,11 +163,11 @@ def visualize_graph_ngrams(graph: Graph):
     fig.update_layout(
         width=1000,   # Width in pixels
         height=1000,  # Height in pixels
-        scene=dict(
-            xaxis=dict(range=[-.032, .025]),  # X-axis limits
-            yaxis=dict(range=[-.032, .025]), # Y-axis limits
-            zaxis=dict(range=[-.05, 1])  # Z-axis limits
-        )
+        # scene=dict(
+        #     xaxis=dict(range=[-.032, .025]),  # X-axis limits
+        #     yaxis=dict(range=[-.032, .025]), # Y-axis limits
+        #     zaxis=dict(range=[-.05, 1])  # Z-axis limits
+        # )
     )
     
     fig.show()

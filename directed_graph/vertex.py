@@ -25,7 +25,7 @@ class Vertex:
     outgoing_edges: Set[int] = field(default_factory=set)
 
     def __post_init__(self) -> None:
-        self.embedding = get_embedding(self.words_of_concept[-1])
+        self.embedding = get_embedding(self.words_of_concept)
 
     def __repr__(self) -> str:
         return f"Vertex(concept='{self.concept}', words={self.words_of_concept})"

@@ -1,0 +1,6 @@
+networkx
+spacy
+numpy
+pymorphy3
+dawg2-python
+matplotlib

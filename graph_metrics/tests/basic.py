@@ -1,10 +1,5 @@
 import os
 import sys
-import inspect
-
-import os
-import sys
-import inspect
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "..", ".."))
@@ -24,12 +19,5 @@ my_graph.add_edge("A", "C", "rel4")
 
 # Calculate and print metrics
 metrics = GraphMetrics(my_graph)
+metrics.full_metrics_plot()
 
-print(f"Average Degree: {metrics.average_degree()}")
-print(f"Degree Distribution: {metrics.degree_distribution()}")
-print(f"Shortest Path (A to C): {metrics.shortest_path_length('A', 'C')}")
-print(f"Average Shortest Path Length: {metrics.average_shortest_path_length()}")
-print(f"Diameter: {metrics.diameter()}")
-print(f"Clustering Coefficient (A): {metrics.clustering_coefficient('A')}")
-print(f"Average Clustering Coefficient: {metrics.average_clustering_coefficient()}")
-print(f"Assortativity: {metrics.assortativity()}")

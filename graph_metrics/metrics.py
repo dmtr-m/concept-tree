@@ -3,169 +3,171 @@ import sys
 import numpy as np
 from typing import List, Dict, Union
 from collections import Counter
-
+import matplotlib.pyplot as plt
+import networkx as nx
 
 from directed_graph.graph import Graph
 from directed_graph.edge import Edge
 from directed_graph.vertex import Vertex
 
+import networkx as nx
+import matplotlib.pyplot as plt
+from collections import Counter
+from typing import Dict
 
 
 class GraphMetrics:
-    """Calculates various metrics for a given Graph object."""
+    """Calculates distributions and other metrics of a graph using NetworkX."""
 
-    def __init__(self, graph: Graph):
-        self.graph = graph
+    def __init__(self, graph):
+        # Преобразуем пользовательский граф в объект NetworkX.Graph
+        self.nx_graph = self._convert_to_networkx(graph)
 
-    def degree(self, concept: str) -> int:
-        """Calculates the degree of a vertex."""
-        if concept not in self.graph.vertices:
-            raise ValueError(f"Vertex '{concept}' does not exist.")
-        return len(self.graph.get_vertex_edges(concept))
+    def _convert_to_networkx(self, graph) -> nx.Graph:
+        """
+        Converts a custom Graph object to a NetworkX Graph.
+        Assumes the input graph is undirected for simplicity.
+        """
+        nx_graph = nx.Graph()
 
-    def average_degree(self) -> float:
-        """Calculates the average degree of the graph."""
-        if not self.graph.vertices:
-            return 0.0  # Handle empty graph case
-        total_degree = sum(self.degree(concept) for concept in self.graph.vertices)
-        return total_degree / len(self.graph.vertices)
+        # Add vertices (nodes)
+        for vertex in graph.vertices:
+            nx_graph.add_node(vertex)
+
+        # Add edges
+        for edge in graph.get_edges():
+            nx_graph.add_edge(edge.agent_1, edge.agent_2)
+
+        return nx_graph
 
     def degree_distribution(self) -> Dict[int, float]:
         """Calculates the degree distribution of the graph."""
-        degrees = [self.degree(concept) for concept in self.graph.vertices]
-        degree_counts = Counter(degrees)
-        total_nodes = len(self.graph.vertices)
+        degrees = dict(self.nx_graph.degree())
+        degree_counts = Counter(degrees.values())
+        total_nodes = len(degrees)
         return {degree: count / total_nodes for degree, count in degree_counts.items()}
 
-    def shortest_path_length(
-        self, start_concept: str, end_concept: str
-    ) -> Union[int, float]:
-        """Calculates the shortest path length between two vertices."""
-        if (
-            start_concept not in self.graph.vertices
-            or end_concept not in self.graph.vertices
-        ):
-            raise ValueError("Start or end vertex does not exist.")
-
-        if start_concept == end_concept:
-            return 0  # Distance to itself is 0
-
-        # BFS to find shortest path
-        queue = [(start_concept, 0)]  # (node, distance)
-        visited = {start_concept}
-
-        while queue:
-            current_node, distance = queue.pop(0)
-            if current_node == end_concept:
-                return distance
-
-            for edge in self.graph.get_vertex_edges(current_node):
-                neighbor = (
-                    edge.agent_2 if edge.agent_1 == current_node else edge.agent_1
-                )
-                if neighbor not in visited:
-                    queue.append((neighbor, distance + 1))
-                    visited.add(neighbor)
-
-        return float("inf")  # No path exists
-
-    def average_shortest_path_length(self) -> Union[float, None]:
-        """Calculates the average shortest path length for the graph."""
-        if not self.graph.vertices:
-            return None  # Handle empty graph case
-
-        total_path_length = 0
-        num_pairs = 0
-        vertices = list(self.graph.vertices.keys())
-
-        for i in range(len(vertices)):
-            for j in range(
-                i + 1, len(vertices)
-            ):  # Avoid double counting and self-loops
-                path_length = self.shortest_path_length(vertices[i], vertices[j])
-                if path_length != float("inf"):
-                    total_path_length += path_length
-                    num_pairs += 1
-
-        return (total_path_length / num_pairs) if num_pairs > 0 else float("inf")
-
-    def diameter(self) -> Union[int, float]:
-        """Calculates the diameter of the graph."""
-        if not self.graph.vertices:
-            return 0.0  # Handle empty graph case
-
-        max_path_length = 0
-        vertices = list(self.graph.vertices.keys())
-
-        for i in range(len(vertices)):
-            for j in range(i + 1, len(vertices)):
-                path_length = self.shortest_path_length(vertices[i], vertices[j])
-                max_path_length = max(max_path_length, path_length)
-
-        return max_path_length if max_path_length != float("inf") else float("inf")
-
-    def clustering_coefficient(self, concept: str) -> Union[float, int]:
-        """Calculates the clustering coefficient of a vertex."""
-        if concept not in self.graph.vertices:
-            raise ValueError(f"Vertex '{concept}' does not exist.")
-
-        neighbors = set()
-        for edge in self.graph.get_vertex_edges(concept):
-            neighbors.add(edge.agent_2 if edge.agent_1 == concept else edge.agent_1)
-
-        k = len(neighbors)
-        if k < 2:
-            return 0  # Clustering coefficient is 0 for vertices with degree < 2
-
-        possible_connections = k * (k - 1) // 2
-        actual_connections = 0
-
-        neighbors_list = list(neighbors)  # create a list
-        for i in range(k):
-            for j in range(i + 1, k):
-                try:
-                    self.shortest_path_length(
-                        neighbors_list[i], neighbors_list[j]
-                    )  # Check for path
-                    actual_connections += 1
-                except ValueError:
-                    pass
-
-        return actual_connections / possible_connections
-
-    def average_clustering_coefficient(self) -> float:
-        """Calculates the average clustering coefficient of the graph."""
-        if not self.graph.vertices:
-            return 0.0  # Handle empty graph case
-
-        total_clustering_coefficient = sum(
-            self.clustering_coefficient(concept) for concept in self.graph.vertices
+    def shortest_path_length_distribution(self) -> Dict[int, float]:
+        """Calculates the distribution of shortest path lengths."""
+        all_pairs_shortest_paths = dict(
+            nx.all_pairs_shortest_path_length(self.nx_graph)
         )
-        return total_clustering_coefficient / len(self.graph.vertices)
+        path_lengths = []
+        for source, targets in all_pairs_shortest_paths.items():
+            for target, length in targets.items():
+                if source != target:  # Exclude self-loops
+                    path_lengths.append(length)
+        path_counts = Counter(path_lengths)
+        total_pairs = len(path_lengths)
+        return {length: count / total_pairs for length, count in path_counts.items()}
+
+    def clustering_coefficient_distribution(self) -> Dict[float, float]:
+        """Calculates the distribution of clustering coefficients."""
+        clustering_coeffs = nx.clustering(self.nx_graph)
+        coeff_counts = Counter(clustering_coeffs.values())
+        total_nodes = len(clustering_coeffs)
+        return {coeff: count / total_nodes for coeff, count in coeff_counts.items()}
+
+    def connected_components(self) -> Dict[int, int]:
+        """Calculates the number and sizes of connected components."""
+        components = list(nx.connected_components(self.nx_graph))
+        component_sizes = [len(component) for component in components]
+        component_counts = Counter(component_sizes)
+        return component_counts
+
+    def centrality_distributions(self) -> Dict[str, Dict[float, float]]:
+        """Calculates degree, betweenness, and closeness centrality distributions."""
+        degree_centrality = nx.degree_centrality(self.nx_graph)
+        betweenness_centrality = nx.betweenness_centrality(self.nx_graph)
+        closeness_centrality = nx.closeness_centrality(self.nx_graph)
+
+        degree_counts = Counter(degree_centrality.values())
+        betweenness_counts = Counter(betweenness_centrality.values())
+        closeness_counts = Counter(closeness_centrality.values())
+
+        total_nodes = len(self.nx_graph.nodes)
+        return {
+            "degree": {
+                centrality: count / total_nodes
+                for centrality, count in degree_counts.items()
+            },
+            "betweenness": {
+                centrality: count / total_nodes
+                for centrality, count in betweenness_counts.items()
+            },
+            "closeness": {
+                centrality: count / total_nodes
+                for centrality, count in closeness_counts.items()
+            },
+        }
+
+    def diameter(self) -> int:
+        """Calculates the diameter of the graph."""
+        if not nx.is_connected(self.nx_graph):
+            raise ValueError("Graph is not connected. Cannot compute diameter.")
+        return nx.diameter(self.nx_graph)
 
     def assortativity(self) -> float:
-        """Calculates the assortativity coefficient of the graph."""
-        if not self.graph.edges:
-            return 0.0
+        """Calculates the degree assortativity coefficient."""
+        return nx.degree_assortativity_coefficient(self.nx_graph)
 
-        sum_jeke = 0.0
-        sum_j_plus_k = 0.0
-        sum_j2_plus_k2 = 0.0
+    def full_metrics_plot(self):
+        """Plots various metrics and distributions in the specified order."""
+        # Получаем все необходимые данные
+        degree_dist = self.degree_distribution()
+        shortest_path_dist = self.shortest_path_length_distribution()
+        clustering_dist = self.clustering_coefficient_distribution()
+        centrality_dist = self.centrality_distributions()
+        components = self.connected_components()
 
-        E = len(self.graph.edges)
+        # Создаем фигуру с 3 строками и соответствующими столбцами
+        fig, axs = plt.subplots(3, 3, figsize=(18, 15))
 
-        for edge in self.graph.edges:
-            agent_1 = edge.agent_1
-            agent_2 = edge.agent_2
+        # Первая строка: degree_dist, shortest_path_dist, clustering_dist
+        self._plot_distribution(axs[0, 0], degree_dist, "Degree Distribution", "Degree", "Frequency", "skyblue")
+        self._plot_distribution(axs[0, 1], shortest_path_dist, "Shortest Path Length Distribution", "Path Length", "Frequency", "salmon")
+        self._plot_distribution(axs[0, 2], clustering_dist, "Clustering Coefficient Distribution", "Clustering Coefficient", "Frequency", "lightgreen")
 
-            j_e = self.degree(agent_1)
-            k_e = self.degree(agent_2)
+        # Вторая строка: centrality_dist (три графика)
+        centrality_colors = {"degree": "orange", "betweenness": "purple", "closeness": "brown"}
+        for i, (centrality_type, dist) in enumerate(centrality_dist.items()):
+            self._plot_distribution(axs[1, i], dist, f"{centrality_type.capitalize()} Centrality", "Centrality Value", "Frequency", centrality_colors[centrality_type])
 
-            sum_jeke += j_e * k_e
-            sum_j_plus_k += j_e + k_e
-            sum_j2_plus_k2 += j_e**2 + k_e**2
+        # Третья строка: connected components и текстовые метрики
+        self._plot_distribution(axs[2, 0], components, "Connected Components Sizes", "Component Size", "Count", "teal")
 
-        r = (sum_jeke / E - (sum_j_plus_k / (2 * E)) ** 2) / (
-            (sum_j2_plus_k2 / (2 * E)) - (sum_j_plus_k / (2 * E)) ** 2
+        # Текстовое поле с другими метриками
+        try:
+            diameter = self.diameter()
+        except ValueError:
+            diameter = "N/A (graph is disconnected)"
+        assortativity = self.assortativity()
+
+        axs[2, 1].text(
+            0.1, 0.5,
+            f"Diameter: {diameter}\n"
+            f"Assortativity: {assortativity:.2f}\n"
+            f"Number of Components: {sum(components.values())}",
+            fontsize=12, bbox=dict(facecolor='white', alpha=0.5)
         )
-        return r
+        axs[2, 1].axis('off')
+
+        # Удаляем пустой график в третьей строке
+        axs[2, 2].axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
+    def _plot_distribution(self, ax, data: Dict[float, float], title: str, xlabel: str, ylabel: str, color: str):
+        """Helper function to plot a distribution."""
+        if not data:
+            ax.text(0.5, 0.5, "No data available", fontsize=12, ha="center", va="center")
+            ax.axis('off')
+            return
+
+        keys, values = zip(*sorted(data.items()))
+        ax.bar(keys, values, color=color, edgecolor="black", alpha=0.7)
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, linestyle="--", alpha=0.5)

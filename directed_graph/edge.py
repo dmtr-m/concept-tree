@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from graph.embedding_manager import EmbeddingManager
+from directed_graph.embedding_manager import get_embedding
 
 import numpy as np
 
@@ -26,7 +26,7 @@ class Edge:
     embedding: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
-        self.embedding = EmbeddingManager.get_embedding(self.label)
+        self.embedding = get_embedding(self.label)
 
     def __repr__(self) -> str:
         return f"Edge({self.agent_1} <--[{self.label}]--> {self.agent_2})"

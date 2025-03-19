@@ -12,14 +12,14 @@ class UnionEdge:
 
     Attributes:
         edge_ids: Set of indices of the edges that are part of this union
-        meaning: The union meaning
+        label: The union meaning
         parent_subgraph: ID of the parent subgraph/source
         embedding: Embedding of the meaning
     """
     edge_ids: Set[int]
-    meaning: str
+    label: str
     parent_subgraph: int
     embedding: np.ndarray = field(init=False)
 
     def __post_init__(self):
-        self.embedding = EmbeddingManager.get_embedding(self.meaning)
+        self.embedding = EmbeddingManager.get_embedding(self.label)

@@ -40,7 +40,7 @@ class Graph:
         if words_of_concept is None:
             words_of_concept = [concept]
 
-        self.vertices[concept] = Vertex(concept, words_of_concept)
+        self.vertices[concept] = Vertex(concept, words_of_concept, len(self.vertices.keys()))
 
     def add_edge(self, agent_1: str, agent_2: str, label: str,
                  edge_type: int = 1, parent_subgraph: int = 1) -> None:

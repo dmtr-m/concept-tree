@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 from typing import List, Dict, Union
-from collections import Counter
+from collections import Counter, defaultdict
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -26,17 +26,42 @@ class GraphMetrics:
     def _convert_to_networkx(self, graph) -> nx.Graph:
         """
         Converts a custom Graph object to a NetworkX Graph.
-        Assumes the input graph is undirected for simplicity.
+        Vertices with the same vertex_type are merged into one logical vertex.
+        Edges with the same edge_type are merged into one logical edge.
         """
         nx_graph = nx.Graph()
 
-        # Add vertices (nodes)
-        for vertex in graph.vertices:
-            nx_graph.add_node(vertex)
+        # Group vertices by their vertex_type
+        vertex_type_map = defaultdict(list)
+        for vertex in graph.vertices.values():
+            vertex_type_map[vertex.vertex_type].append(vertex.concept)
 
-        # Add edges
+        # Add merged vertices (logical nodes)
+        for vertex_type, concepts in vertex_type_map.items():
+            merged_vertex_name = f"Type_{vertex_type}"
+            nx_graph.add_node(merged_vertex_name, concepts=concepts)
+
+        # Group edges by their edge_type
+        edge_type_map = defaultdict(set)
         for edge in graph.get_edges():
-            nx_graph.add_edge(edge.agent_1, edge.agent_2)
+            agent_1 = graph.vertices[edge.agent_1]
+            agent_2 = graph.vertices[edge.agent_2]
+
+            merged_vertex_1 = f"Type_{agent_1.vertex_type}"
+            merged_vertex_2 = f"Type_{agent_2.vertex_type}"
+
+            if merged_vertex_1 != merged_vertex_2:  # Avoid self-loops
+                edge_key = (merged_vertex_1, merged_vertex_2, edge.edge_type)
+                edge_type_map[edge_key].add(edge.label)
+
+        # Add merged edges (logical edges)
+        for (vertex_1, vertex_2, edge_type), labels in edge_type_map.items():
+            merged_edge_label = ", ".join(
+                sorted(labels)
+            )  # Combine all labels for the same edge_type
+            nx_graph.add_edge(
+                vertex_1, vertex_2, label=merged_edge_label, edge_type=edge_type
+            )
 
         return nx_graph
 
@@ -124,17 +149,56 @@ class GraphMetrics:
         fig, axs = plt.subplots(3, 3, figsize=(18, 15))
 
         # Первая строка: degree_dist, shortest_path_dist, clustering_dist
-        self._plot_distribution(axs[0, 0], degree_dist, "Degree Distribution", "Degree", "Frequency", "skyblue")
-        self._plot_distribution(axs[0, 1], shortest_path_dist, "Shortest Path Length Distribution", "Path Length", "Frequency", "salmon")
-        self._plot_distribution(axs[0, 2], clustering_dist, "Clustering Coefficient Distribution", "Clustering Coefficient", "Frequency", "lightgreen")
+        self._plot_distribution(
+            axs[0, 0],
+            degree_dist,
+            "Degree Distribution",
+            "Degree",
+            "Frequency",
+            "skyblue",
+        )
+        self._plot_distribution(
+            axs[0, 1],
+            shortest_path_dist,
+            "Shortest Path Length Distribution",
+            "Path Length",
+            "Frequency",
+            "salmon",
+        )
+        self._plot_distribution(
+            axs[0, 2],
+            clustering_dist,
+            "Clustering Coefficient Distribution",
+            "Clustering Coefficient",
+            "Frequency",
+            "lightgreen",
+        )
 
         # Вторая строка: centrality_dist (три графика)
-        centrality_colors = {"degree": "orange", "betweenness": "purple", "closeness": "brown"}
+        centrality_colors = {
+            "degree": "orange",
+            "betweenness": "purple",
+            "closeness": "brown",
+        }
         for i, (centrality_type, dist) in enumerate(centrality_dist.items()):
-            self._plot_distribution(axs[1, i], dist, f"{centrality_type.capitalize()} Centrality", "Centrality Value", "Frequency", centrality_colors[centrality_type])
+            self._plot_distribution(
+                axs[1, i],
+                dist,
+                f"{centrality_type.capitalize()} Centrality",
+                "Centrality Value",
+                "Frequency",
+                centrality_colors[centrality_type],
+            )
 
         # Третья строка: connected components и текстовые метрики
-        self._plot_distribution(axs[2, 0], components, "Connected Components Sizes", "Component Size", "Count", "teal")
+        self._plot_distribution(
+            axs[2, 0],
+            components,
+            "Connected Components Sizes",
+            "Component Size",
+            "Count",
+            "teal",
+        )
 
         # Текстовое поле с другими метриками
         try:
@@ -144,25 +208,37 @@ class GraphMetrics:
         assortativity = self.assortativity()
 
         axs[2, 1].text(
-            0.1, 0.5,
+            0.1,
+            0.5,
             f"Diameter: {diameter}\n"
             f"Assortativity: {assortativity:.2f}\n"
             f"Number of Components: {sum(components.values())}",
-            fontsize=12, bbox=dict(facecolor='white', alpha=0.5)
+            fontsize=12,
+            bbox=dict(facecolor="white", alpha=0.5),
         )
-        axs[2, 1].axis('off')
+        axs[2, 1].axis("off")
 
         # Удаляем пустой график в третьей строке
-        axs[2, 2].axis('off')
+        axs[2, 2].axis("off")
 
         plt.tight_layout()
         plt.show()
 
-    def _plot_distribution(self, ax, data: Dict[float, float], title: str, xlabel: str, ylabel: str, color: str):
+    def _plot_distribution(
+        self,
+        ax,
+        data: Dict[float, float],
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        color: str,
+    ):
         """Helper function to plot a distribution."""
         if not data:
-            ax.text(0.5, 0.5, "No data available", fontsize=12, ha="center", va="center")
-            ax.axis('off')
+            ax.text(
+                0.5, 0.5, "No data available", fontsize=12, ha="center", va="center"
+            )
+            ax.axis("off")
             return
 
         keys, values = zip(*sorted(data.items()))

@@ -5,7 +5,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "..", ".."))
 sys.path.insert(0, project_root)
 
-from directed_graph.graph import Graph
+from directed_graph.graph import Graph, visualize_graph
 from graph_metrics.metrics import GraphMetrics
 
 my_graph = Graph()
@@ -20,4 +20,6 @@ my_graph.add_edge("A", "C", "rel4")
 # Calculate and print metrics
 metrics = GraphMetrics(my_graph)
 metrics.full_metrics_plot()
+
+visualize_graph(my_graph)
 

@@ -23,7 +23,9 @@ class Graph:
         self.edges: List[Edge] = []
         self.vertex_edges: Dict[str, Set[int]] = defaultdict(set)
 
-    def add_vertex(self, concept: str, words_of_concept: Optional[List[str]] = None) -> None:
+    def add_vertex(
+        self, concept: str, words_of_concept: Optional[List[str]] = None
+    ) -> None:
         """
         Add a vertex to the graph.
 
@@ -40,10 +42,18 @@ class Graph:
         if words_of_concept is None:
             words_of_concept = [concept]
 
-        self.vertices[concept] = Vertex(concept, words_of_concept, len(self.vertices.keys()))
+        self.vertices[concept] = Vertex(
+            concept, words_of_concept, len(self.vertices.keys())
+        )
 
-    def add_edge(self, agent_1: str, agent_2: str, label: str,
-                 edge_type: int = 1, parent_subgraph: int = 1) -> None:
+    def add_edge(
+        self,
+        agent_1: str,
+        agent_2: str,
+        label: str,
+        edge_type: int = 1,
+        parent_subgraph: int = 1,
+    ) -> None:
         """
         Add an edge between two vertices.
 
@@ -96,7 +106,7 @@ class Graph:
             raise ValueError(f"Vertex '{concept}' does not exist")
 
         return [self.edges[i] for i in self.vertex_edges[concept]]
-    
+
     def get_incoming_edges(self, concept: str) -> List[Edge]:
         """
         Get all incoming edges for a given vertex.
@@ -147,7 +157,7 @@ class Graph:
             List of all Edge objects in graph
         """
         return self.edges
-    
+
     @staticmethod
     def build_from_vertices_and_edges(edges: List[Edge]):
         graph = Graph()
@@ -159,7 +169,13 @@ class Graph:
                 graph.add_vertex(edge.agent_2)
 
         for edge in edges:
-            graph.add_edge(edge.agent_1, edge.agent_2, edge.label, edge.edge_type, edge.parent_subgraph)
+            graph.add_edge(
+                edge.agent_1,
+                edge.agent_2,
+                edge.label,
+                edge.edge_type,
+                edge.parent_subgraph,
+            )
 
         return graph
 
@@ -167,8 +183,10 @@ class Graph:
         return f"Graph(vertices={len(self.vertices)}, edges={len(self.edges)})"
 
     def __str__(self) -> str:
-        return (f"Graph(\n\tvertices={list(self.vertices.values())},\n"
-                f"\tedges={self.edges}\n)")
+        return (
+            f"Graph(\n\tvertices={list(self.vertices.values())},\n"
+            f"\tedges={self.edges}\n)"
+        )
 
 
 def visualize_graph(graph: Graph) -> None:
@@ -190,21 +208,86 @@ def visualize_graph(graph: Graph) -> None:
     plt.figure(figsize=(12, 8))
 
     # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue',
-                           node_size=2000, alpha=0.7)
+    nx.draw_networkx_nodes(G, pos, node_color="lightblue", node_size=2000, alpha=0.7)
 
     # Draw edges
-    nx.draw_networkx_edges(G, pos, edge_color='gray',
-                           arrows=True, arrowsize=20)
+    nx.draw_networkx_edges(G, pos, edge_color="gray", arrows=True, arrowsize=20)
 
     # Draw node labels
     nx.draw_networkx_labels(G, pos, font_size=10)
 
     # Draw edge labels
-    edge_labels = nx.get_edge_attributes(G, 'meaning')
+    edge_labels = nx.get_edge_attributes(G, "meaning")
     nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=8)
 
     plt.title("Concept Tree")
-    plt.axis('off')
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize_graph_with_equivalent_elements(graph: Graph) -> None:
+    """
+    Visualizes the graph by grouping vertices with the same vertex_type
+    and edges with the same edge_type into logical nodes and edges.
+    """
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Group vertices by their vertex_type
+    vertex_type_map = defaultdict(list)
+    for vertex in graph.vertices.values():
+        vertex_type_map[vertex.vertex_type].append(vertex.concept)
+
+    # Add merged vertices (logical nodes)
+    for vertex_type, concepts in vertex_type_map.items():
+        merged_vertex_name = f"Type_{vertex_type}\n" + "\n".join(concepts)
+        G.add_node(merged_vertex_name)
+
+    # Group edges by their edge_type
+    edge_type_map = defaultdict(set)
+    for edge in graph.get_edges():
+        agent_1 = graph.vertices[edge.agent_1]
+        agent_2 = graph.vertices[edge.agent_2]
+
+        merged_vertex_1 = f"Type_{agent_1.vertex_type}\n" + "\n".join(
+            vertex_type_map[agent_1.vertex_type]
+        )
+        merged_vertex_2 = f"Type_{agent_2.vertex_type}\n" + "\n".join(
+            vertex_type_map[agent_2.vertex_type]
+        )
+
+        if merged_vertex_1 != merged_vertex_2:  # Avoid self-loops
+            edge_key = (merged_vertex_1, merged_vertex_2, edge.edge_type)
+            edge_type_map[edge_key].add(edge.label)
+
+    # Add merged edges (logical edges)
+    for (vertex_1, vertex_2, edge_type), labels in edge_type_map.items():
+        merged_edge_label = ", ".join(
+            sorted(labels)
+        )  # Combine all labels for the same edge_type
+        G.add_edge(vertex_1, vertex_2, label=merged_edge_label)
+
+    # Create the layout
+    pos = nx.spring_layout(G)
+
+    # Draw the graph
+    plt.figure(figsize=(12, 8))
+
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, node_color="lightblue", node_size=3000, alpha=0.7)
+
+    # Draw edges
+    nx.draw_networkx_edges(G, pos, edge_color="gray", arrows=True, arrowsize=20)
+
+    # Draw node labels
+    nx.draw_networkx_labels(G, pos, font_size=10)
+
+    # Draw edge labels
+    edge_labels = nx.get_edge_attributes(G, "label")
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
+    plt.title("Concept Tree (Grouped by Vertex Type and Edge Type)")
+    plt.axis("off")
     plt.tight_layout()
     plt.show()

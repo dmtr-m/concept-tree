@@ -6,6 +6,7 @@ from directed_graph.vertex import Vertex
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import spacy
 
 
 class Graph:
@@ -15,13 +16,17 @@ class Graph:
     Attributes:
         vertices: Dictionary mapping concept names to Vertex objects
         edges: List of Edge objects
-        vertex_edges: Dictionary mapping vertex concepts to sets of edge indices
+        vertex_edges: Dictionary mapping vertex conce   pts to sets of edge indices
     """
 
     def __init__(self) -> None:
+        self.nlp = spacy.load("en_core_web_sm")
         self.vertices: Dict[str, Vertex] = {}
         self.edges: List[Edge] = []
         self.vertex_edges: Dict[str, Set[int]] = defaultdict(set)
+
+    def contains_vertex(self, concept):
+        return concept in self.vertices.keys()
 
     def add_vertex(
         self, concept: str, words_of_concept: Optional[List[str]] = None
@@ -75,7 +80,9 @@ class Graph:
 
         # Create and store the edge
         edge_index = len(self.edges)
-        new_edge = Edge(agent_1, agent_2, label, edge_type, parent_subgraph)
+        new_edge = Edge(
+            agent_1, agent_2, label, edge_type, parent_subgraph, self.nlp(label)[0].pos_
+        )
         self.edges.append(new_edge)
 
         # Update vertex adjacency information

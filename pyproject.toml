@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "concept-tree"
+version = "0.1.0"
+description = ""
+authors = ["Кирилл Демехин <englishtea21@mail.ru>"]
+
+[tool.poetry.dependencies]
+python = "3.10"
+networkx = "^3.4.2"
+spacy = "^3.5"
+coreferee = "^1.4"
+nltk = "^3.9.1"
+numpy = "1.26.4"
+pymorphy3 = "^2.0.3"
+DAWG2-Python = "^0.9.0"
+matplotlib = "^3.10.1"
+ipykernel = "^6.29.5"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,6 +1,9 @@
 networkx
 spacy
+coreferee
+nltk
 numpy
 pymorphy3
 dawg2-python
 matplotlib
+scikit-learn

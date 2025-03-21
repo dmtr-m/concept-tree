@@ -1,13 +1,13 @@
 import spacy
 from typing import List, Dict, Tuple, Set
-from graph import Graph, visualize_graph
+from directed_graph.graph import Graph, visualize_graph
 from collections import defaultdict
 
 
 class SentenceAnalyzer:
     def __init__(self):
         # Load Russian language model
-        self.nlp = spacy.load("en_core_web_trf-3.8.0")
+        self.nlp = spacy.load("en_core_web_trf")
         self.graph = Graph()
 
     def extract_noun_phrases(self, doc) -> List[Tuple[spacy.tokens.Span, List[str]]]:

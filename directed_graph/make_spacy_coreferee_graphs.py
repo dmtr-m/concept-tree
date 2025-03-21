@@ -6,7 +6,7 @@ from spacy import displacy
 
 class GraphMaker:
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_sm")
+        self.nlp = spacy.load("en_core_web_trf")
         self.nlp.add_pipe("coreferee")
 
     def create_dependency_graph(self, sentence):
@@ -202,4 +202,4 @@ class GraphMaker:
                     mention_text = doc[mention[0] : mention[1]].text
                     resolved_text = resolved_text.replace(mention_text, antecedent, 1)
 
-        return resolved_text
+        return resolved_text.lower()

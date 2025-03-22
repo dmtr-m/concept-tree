@@ -7,3 +7,4 @@ pymorphy3
 dawg2-python
 matplotlib
 scikit-learn
+stanza

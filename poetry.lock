@@ -186,6 +186,17 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
+name = "emoji"
+version = "2.14.1"
+description = "Emoji for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+dev = ["pytest (>=7.4.4)", "coverage"]
+
+[[package]]
 name = "en-core-web-sm"
 version = "3.5.0"
 description = "English pipeline optimized for CPU. Components: tok2vec, tagger, parser, senter, ner, attribute_ruler, lemmatizer."
@@ -199,6 +210,7 @@ spacy = ">=3.5.0,<3.6.0"
 [package.source]
 type = "url"
 url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0.tar.gz"
+
 [[package]]
 name = "en-core-web-trf"
 version = "3.5.0"
@@ -214,6 +226,7 @@ spacy-transformers = ">=1.2.0.dev0,<1.3.0"
 [package.source]
 type = "url"
 url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.5.0/en_core_web_trf-3.5.0.tar.gz"
+
 [[package]]
 name = "exceptiongroup"
 version = "1.2.2"
@@ -884,6 +897,14 @@ python-versions = ">=3.8.0"
 wcwidth = "*"
 
 [[package]]
+name = "protobuf"
+version = "6.30.1"
+description = ""
+category = "main"
+optional = false
+python-versions = ">=3.9"
+
+[[package]]
 name = "psutil"
 version = "7.0.0"
 description = "Cross-platform lib for process and system monitoring in Python.  NOTE: the syntax of this script MUST be kept compatible with Python 2.7."
@@ -1231,6 +1252,32 @@ pure-eval = "*"
 tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
+name = "stanza"
+version = "1.10.1"
+description = "A Python NLP Library for Many Human Languages, by the Stanford NLP Group"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+emoji = "*"
+networkx = "*"
+numpy = "*"
+protobuf = ">=3.15.0"
+requests = "*"
+tomli = {version = "*", markers = "python_version < \"3.11\""}
+torch = ">=1.3.0"
+tqdm = "*"
+
+[package.extras]
+dev = ["check-manifest"]
+test = ["coverage", "pytest"]
+transformers = ["transformers (>=3.0.0)", "peft (>=0.6.1)"]
+datasets = ["datasets"]
+tokenizers = ["jieba", "pythainlp", "python-crfsuite", "spacy", "sudachidict-core", "sudachipy"]
+visualization = ["spacy", "streamlit", "ipython"]
+
+[[package]]
 name = "sympy"
 version = "1.13.1"
 description = "Computer algebra system (CAS) in Python"
@@ -1301,6 +1348,14 @@ python-versions = "*"
 dev = ["pytest", "requests", "numpy", "datasets", "black (==22.3)"]
 docs = ["sphinx", "sphinx-rtd-theme", "setuptools-rust"]
 testing = ["pytest", "requests", "numpy", "datasets", "black (==22.3)"]
+
+[[package]]
+name = "tomli"
+version = "2.2.1"
+description = "A lil' TOML parser"
+category = "main"
+optional = false
+python-versions = ">=3.8"
 
 [[package]]
 name = "torch"
@@ -1515,7 +1570,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10"
-content-hash = "c9598795f17551a28e8c9a5aa83a253fbf713cf5c179917dfc980c85b1533272"
+content-hash = "d47192ab3cead2ad3f0c46a38625fbdeed45512ac009f4c9f0cdbe2efd838626"
 
 [metadata.files]
 appnope = []
@@ -1536,6 +1591,7 @@ cymem = []
 dawg2-python = []
 debugpy = []
 decorator = []
+emoji = []
 en-core-web-sm = []
 en-core-web-trf = []
 exceptiongroup = []
@@ -1587,6 +1643,7 @@ pillow = []
 platformdirs = []
 preshed = []
 prompt-toolkit = []
+protobuf = []
 psutil = []
 ptyprocess = []
 pure-eval = []
@@ -1612,9 +1669,11 @@ spacy-loggers = []
 spacy-transformers = []
 srsly = []
 stack-data = []
+stanza = []
 sympy = []
 thinc = []
 tokenizers = []
+tomli = []
 torch = []
 tornado = []
 tqdm = []

@@ -17,6 +17,7 @@ class Vertex:
         embedding: The embedding of the concept
         adjacent_edges: Set of adjacent edge IDs
     """
+
     concept: str
     words_of_concept: List[str]
     vertex_type: int

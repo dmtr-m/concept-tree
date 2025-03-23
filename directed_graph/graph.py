@@ -6,7 +6,6 @@ from directed_graph.vertex import Vertex
 
 import networkx as nx
 import matplotlib.pyplot as plt
-import spacy
 
 
 class Graph:
@@ -20,7 +19,6 @@ class Graph:
     """
 
     def __init__(self) -> None:
-        self.nlp = spacy.load("en_core_web_sm")
         self.vertices: Dict[str, Vertex] = {}
         self.edges: List[Edge] = []
         self.vertex_edges: Dict[str, Set[int]] = defaultdict(set)
@@ -58,6 +56,7 @@ class Graph:
         label: str,
         edge_type: int = 1,
         parent_subgraph: int = 1,
+        label_pos=None,
     ) -> None:
         """
         Add an edge between two vertices.
@@ -80,9 +79,7 @@ class Graph:
 
         # Create and store the edge
         edge_index = len(self.edges)
-        new_edge = Edge(
-            agent_1, agent_2, label, edge_type, parent_subgraph, self.nlp(label)[0].pos_
-        )
+        new_edge = Edge(agent_1, agent_2, label, edge_type, parent_subgraph, label_pos)
         self.edges.append(new_edge)
 
         # Update vertex adjacency information
@@ -182,6 +179,61 @@ class Graph:
                 edge.label,
                 edge.edge_type,
                 edge.parent_subgraph,
+            )
+
+        return graph
+
+    @staticmethod
+    def build_from_triples_csv(path: str):
+        """
+        Build a graph from a CSV file containing triplets.
+
+        Args:
+            path: Path to the CSV file containing triplets.
+                Expected columns: "subject", "relation", "object".
+                Optional columns: "relation_pos".
+
+        Returns:
+            A Graph object populated with vertices and edges based on the triplets.
+        """
+        import pandas as pd
+
+        # Создаем пустой граф
+        graph = Graph()
+
+        # Загружаем данные из CSV-файла
+        try:
+            df = pd.read_csv(path)
+        except Exception as e:
+            raise ValueError(f"Ошибка при чтении файла CSV: {e}")
+
+        # Проверяем обязательные столбцы
+        required_columns = {"subject", "relation", "object"}
+        if not required_columns.issubset(df.columns):
+            missing_columns = required_columns - set(df.columns)
+            raise ValueError(f"Отсутствуют необходимые столбцы: {missing_columns}")
+
+        # Добавляем вершины и ребра на основе триплетов
+        for _, row in df.iterrows():
+            subject = row["subject"]
+            relation = row["relation"]
+            obj = row["object"]
+            relation_pos = row.get("relation_pos", None)  # Опциональный столбец
+
+            # Добавляем вершины, если они еще не добавлены
+            if subject not in graph.vertices:
+                graph.add_vertex(subject)
+            if obj not in graph.vertices:
+                graph.add_vertex(obj)
+
+            # Добавляем ребро между вершинами
+            graph.add_edge(
+                agent_1=subject,
+                agent_2=obj,
+                label=relation,
+                edge_type=1,  # Тип ребра по умолчанию
+                parent_subgraph=1,  # ID родительского подграфа по умолчанию
+                label_pos=relation_pos,
             )
 
         return graph

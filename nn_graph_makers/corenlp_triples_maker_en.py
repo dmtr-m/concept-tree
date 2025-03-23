@@ -1,7 +1,9 @@
 import os
 
 # requires corenlpserver https://nlp.stanford.edu/software/stanford-corenlp-4.5.8.zip
-os.environ["CORENLP_HOME"] = "corenlp_triples_maker/stanford-corenlp-4.5.8"
+os.environ["CORENLP_HOME"] = "nn_graph_makers/stanford-corenlp-4.5.8"
+
+from directed_graph.graph import Graph, visualize_graph_with_equivalent_elements
 
 import os
 import pandas as pd
@@ -116,43 +118,34 @@ class OpenIETriplesMaker:
 
 # Пример использования
 if __name__ == "__main__":
-    processor = OpenIETriplesMaker(max_length=3)
+    processor = OpenIETriplesMaker(max_length=3, endpoint="http://localhost:9090")
 
     # Исходный текст
     text = """
-    Biological systems reach organizational complexity that far exceeds the complexity of any
-    known inanimate objects. Biological entities undoubtedly obey the laws of quantum physics and
-    statistical mechanics. However, is modern physics sufficient to adequately describe, model and
-    explain the evolution of biological complexity? Detailed parallels have been drawn between
-    statistical thermodynamics and the population-genetic theory of biological evolution. Based on
-    these parallels, we outline new perspectives on biological innovation and major transitions in
-    evolution, and introduce a biological equivalent of thermodynamic potential that reflects the
-    innovation propensity of an evolving population. Deep analogies have been suggested to also
-    exist between the properties of biological entities and processes, and those of frustrated states in
-    physics, such as glasses. Such systems are characterized by frustration whereby local state with
-    minimal free energy conflict with the global minimum, resulting in “emergent phenomena”. We
-    extend such analogies by examining frustration-type phenomena, such as conflicts between
-    different levels of selection, in biological evolution. These frustration effects appear to drive the
-    evolution of biological complexity. We further address evolution in multidimensional fitness
-    landscapes from the point of view of percolation theory and suggest that percolation at level
-    above the critical threshold dictates the tree-like evolution of complex organisms. Taken
-    together, these multiple connections between fundamental processes in physics and biology
-    imply that construction of a meaningful physical theory of biological evolution might not be a
-    futile effort. However, it is unrealistic to expect that such a theory can be created in one scoop;
-    if it ever comes to being, this can only happen through integration of multiple physical models of
-    evolutionary processes. Furthermore, the existing framework of theoretical physics is unlikely to
-    suffice for adequate modeling of the biological level of complexity, and new developments
-    within physics itself are likely to be required.
+   Chemical reaction networks are naturally described by the mathematical theory of graphs in which chemical species are represented by vertices and physicochemical processes are represented by weighted and directed hyperedges which capture the direction and stoichiometric quantities of each process (Fig. 1 ) [[[cite]]] . 
+   Graphs of this flavor admit a matrix representation: the incidence or stoichiometric matrix [[[formula]]] . Physically, these matrices satisfy the mass-action kinetic differential equation: [[[formula]]] (1) where [[[formula]]] is a vector of concentrations and [[[formula]]] is a vector of fluxes. Each [[[formula]]] corresponds to the net rate of change in concentrations of the chemical species involved in process [[[formula]]] . Each [[[formula]]] is a sum of directed fluxes: [[[formula]]] where directed fluxes are proportional to the probability of an encounter between reactants (or products) [[[cite]]] . 
+   If the mathematical forms of these fluxes are known, the concentrations of chemicals in the network are readily obtained [[[cite]]] . 
+   Without loss of generality, we will assume that all fluxes are reversible. 
+   Specifically, processes proceed in the forward direction if [[[formula]]] , while for [[[formula]]] the process is reversed. 
+   The graph representation of chemical reaction networks makes distance metrics on graphs attractive choices. 
+   However, not all graph distance metrics are suitable for directed graphs with hyperedges; applications of these metrics typically ignore directionality or stoichiometry [[[cite]]] . 
+   Other existing metrics opt for computational tractability, such as reducing the scope to comparisons of the presence/absence of metabolic processes [[[cite]]] or feature vectors of topological measures derived from a graph-theoretic approach [[[cite]]] . We avoid these information losses by leveraging advances in parallel computing and numerical linear algebra to make calculations of stoichiometric nullspaces tractable for large datasets [[[cite]]] . 
+   At this point, one may ask why focus on nullspaces of stoichiometric matrices?
+
     """
 
     # Извлечение и фильтрация триплетов
-    triples = processor.extract_triples(text)
+    # triples = processor.extract_triples(text)
 
     # Вывод результатов
-    print("Отфильтрованные триплеты:")
-    for triple in triples:
-        print(triple)
+    # print("Отфильтрованные триплеты:")
+    # for triple in triples:
+        # print(triple)
 
     # Сохранение триплетов в CSV
-    output_file = "filtered_triples.csv"
-    processor.extract_triples_to_csv(triples, output_file)
+    # output_file = "filtered_triples.csv"
+    # processor.save_triples_to_csv(triples, output_file)
+
+    graph = Graph.build_from_triples_csv("filtered_triples.csv")
+
+    visualize_graph_with_equivalent_elements(graph)

@@ -18,6 +18,7 @@ ipykernel = "^6.29.5"
 en_core_web_trf = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.5.0/en_core_web_trf-3.5.0.tar.gz"}
 en_core_web_sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0.tar.gz"}
 stanza = "^1.10.1"
+pandas = "^2.2.3"
 [tool.poetry.dev-dependencies]
 
 [build-system]

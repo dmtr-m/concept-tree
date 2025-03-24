@@ -100,20 +100,27 @@ class OpenIETriplesMaker:
 
         return triples
 
-    def save_triples_to_csv(self, triples, output_file):
+    def save_triples_to_csv(self, triples, output_file, use_pickle=False):
         """
-        Сохранение триплетов в формате CSV с использованием pandas.
+        Сохранение триплетов в формате CSV или pickle с использованием pandas.
         :param triples: Список триплетов.
-        :param output_file: Путь к выходному файлу CSV.
+        :param output_file: Путь к выходному файлу.
+        :param use_pickle: Если True, сохраняет сериализованный DataFrame с использованием pickle и сжатия.
+                           Если False, сохраняет данные в CSV формате.
         """
         # Создание DataFrame из списка триплетов
         df = pd.DataFrame(
             triples, columns=["subject", "relation", "relation_pos", "object"]
         )
 
-        # Сохранение в CSV
-        df.to_csv(output_file, index=False, encoding="utf-8")
-        print(f"Триплеты сохранены в файл: {output_file}")
+        if use_pickle:
+            # Сохранение DataFrame в формате pickle с использованием gzip-сжатия
+            df.to_pickle(output_file, compression="gzip")
+            print(f"Триплеты сохранены в файл (pickle с сжатием): {output_file}")
+        else:
+            # Сохранение в CSV
+            df.to_csv(output_file, index=False, encoding="utf-8")
+            print(f"Триплеты сохранены в файл (CSV): {output_file}")
 
 
 # Пример использования
@@ -140,7 +147,7 @@ if __name__ == "__main__":
     # Вывод результатов
     # print("Отфильтрованные триплеты:")
     # for triple in triples:
-        # print(triple)
+    # print(triple)
 
     # Сохранение триплетов в CSV
     # output_file = "filtered_triples.csv"

@@ -184,14 +184,15 @@ class Graph:
         return graph
 
     @staticmethod
-    def build_from_triples_csv(path: str):
+    def build_from_triples_csv(path: str, file_format: str = "csv"):
         """
-        Build a graph from a CSV file containing triplets.
+        Build a graph from a file containing triplets.
 
         Args:
-            path: Path to the CSV file containing triplets.
+            path: Path to the file containing triplets.
                 Expected columns: "subject", "relation", "object".
                 Optional columns: "relation_pos".
+            file_format: Формат файла ("csv" или "pickle"). Значение по умолчанию "csv".
 
         Returns:
             A Graph object populated with vertices and edges based on the triplets.
@@ -201,11 +202,14 @@ class Graph:
         # Создаем пустой граф
         graph = Graph()
 
-        # Загружаем данные из CSV-файла
+        # Загружаем данные из файла
         try:
-            df = pd.read_csv(path)
+            if file_format.lower() == "pickle":
+                df = pd.read_pickle(path)
+            else:  # по умолчанию используем csv
+                df = pd.read_csv(path)
         except Exception as e:
-            raise ValueError(f"Ошибка при чтении файла CSV: {e}")
+            raise ValueError(f"Ошибка при чтении файла {file_format}: {e}")
 
         # Проверяем обязательные столбцы
         required_columns = {"subject", "relation", "object"}
@@ -218,7 +222,9 @@ class Graph:
             subject = row["subject"]
             relation = row["relation"]
             obj = row["object"]
-            relation_pos = row.get("relation_pos", None)  # Опциональный столбец
+
+            # Для опционального столбца relation_pos, если его нет, используем None
+            relation_pos = row["relation_pos"] if "relation_pos" in df.columns else None
 
             # Добавляем вершины, если они еще не добавлены
             if subject not in graph.vertices:

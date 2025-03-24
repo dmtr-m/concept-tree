@@ -4,6 +4,8 @@ from collections import defaultdict
 from directed_graph.edge import Edge
 from directed_graph.vertex import Vertex
 
+import pickle
+
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -252,6 +254,14 @@ class Graph:
             f"Graph(\n\tvertices={list(self.vertices.values())},\n"
             f"\tedges={self.edges}\n)"
         )
+
+def save_graph(graph: Graph, filename: str) -> None:
+    with open(filename, 'wb') as f:
+        pickle.dump(graph, f)
+
+def load_graph(filename: str) -> Graph:
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
 
 def visualize_graph(graph: Graph) -> None:

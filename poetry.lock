@@ -1051,7 +1051,7 @@ python-versions = "*"
 
 [[package]]
 name = "pyparsing"
-version = "3.2.1"
+version = "3.2.2"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
 category = "main"
 optional = false
@@ -1608,7 +1608,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "tzdata"
-version = "2025.1"
+version = "2025.2"
 description = "Provider of IANA time zone data"
 category = "main"
 optional = false
@@ -1649,8 +1649,8 @@ python-versions = "*"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "3.10"
-content-hash = "55f3df0503afba55db1c68ea2ff3dd7b2128739d2d749d1f263430913b1050a0"
+python-versions = ">=3.10,<3.11"
+content-hash = "ccf74336693ed30f36260b4c8c0551b8797668874dfa7c6b6a8e4514c7135397"
 
 [metadata.files]
 appnope = []

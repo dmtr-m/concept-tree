@@ -17,7 +17,7 @@ class GraphDecomposer:
     """Decomposes graphs into a list of paths"""
 
     @staticmethod
-    def decompose_full_graph(graph: Graph) -> Tuple[List[List[str]], List[List[Edge]]]:
+    def decompose_full_graph(graph: Graph, available_vertices: List[str]) -> Tuple[List[List[str]], List[List[Edge]]]:
         """
         Decompose the data graph into all possible simple paths.
 
@@ -29,8 +29,8 @@ class GraphDecomposer:
         graph_vertex_paths = []
         graph_edge_paths = []
 
-        for start_vertex in graph.vertices:
-            for end_vertex in graph.vertices:
+        for start_vertex in available_vertices:
+            for end_vertex in available_vertices:
                 if start_vertex != end_vertex:
                     new_vertex_paths, new_edge_paths = GraphDecomposer.find_all_paths(
                         graph, start_vertex, end_vertex

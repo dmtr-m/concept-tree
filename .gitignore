@@ -7,3 +7,4 @@ openie-standalone**
 *.npy
 *.npy
 */data/*
+*.pickle

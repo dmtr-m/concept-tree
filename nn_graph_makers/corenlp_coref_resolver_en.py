@@ -13,14 +13,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from nn_graph_makers.find_free_ports import find_free_ports
 
+# from find_free_ports import find_free_ports
+
 import time
 
 
 class CoreferenceResolver:
-    def __init__(self, properties, endpoint, threads):
+    def __init__(self, properties, endpoint, threads, max_char_length, memory=6):
         self.properties = properties
         self.endpoint = endpoint
         self.threads = threads
+        self.max_char_length = max_char_length
+        self.memory_in_gs = memory
         self.client = None
 
     def start_client(self):
@@ -144,7 +148,6 @@ class CoreferenceResolver:
         properties = {
             "annotators": "tokenize,ssplit,pos,lemma,ner,parse,coref",
             "coref.algorithm": algorithm,
-            "memory": "4G",
         }
 
         def process_file(input_path, output_path):
@@ -174,8 +177,10 @@ class CoreferenceResolver:
             properties=properties,
             threads=self.threads,
             endpoint=self.endpoint,
-            timeout=60000,  # Увеличиваем таймаут
+            timeout=600000,  # Увеличиваем таймаут
             be_quiet=True,
+            max_char_length=self.max_char_length,
+            memory=f"{self.memory_in_gs}G",
         ) as self.client:
             results = []
             try:
@@ -340,6 +345,8 @@ if __name__ == "__main__":
         properties=None,
         endpoint=f"http://localhost:{find_free_ports(1)[0]}",
         threads=total_threads,
+        max_char_length=10000,
+        memory=2,
     )
     resolver.process_files(input_paths, output_paths, "neural", verbose=False)
     end_time = time.time()

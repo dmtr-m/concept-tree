@@ -1,5 +1,6 @@
 import spacy
 import spacy.cli
+import spacy_experimental
 from nltk.stem import WordNetLemmatizer
 from graph.higher_dim_graph import Graph
 from graph.graph import visualize_graph
@@ -10,6 +11,47 @@ from graph.vertex import Vertex
 # spacy.cli.download("en_core_web_lg")
 nlp = spacy.load("en_core_web_lg")
 lemmatizer = WordNetLemmatizer()
+
+def resolve_anaphora(text):
+    """
+    Разрешает анафору в тексте, заменяя местоимения на их референты.
+    """
+    doc = nlp(text)
+    resolved_text = text
+
+    print("Coreference clusters:")
+    print(doc.spans.get("coref_clusters", []))  # Отладочный вывод
+
+    coref_map = {}  # Словарь замен
+
+    # Обрабатываем кластеры coreference resolution
+    for cluster in doc.spans.get("coref_clusters", []):
+        main_mention = cluster[0].text  # Главный референт
+        for mention in cluster[1:]:
+            if mention.text.lower() in {"it", "this", "that", "they", "those"}:
+                print(f"Replacing '{mention.text}' with '{main_mention}'")
+                coref_map[mention.text] = main_mention  # Добавляем в словарь замен
+
+    # Принудительная замена "that", если оно осталось в тексте
+    for pronoun in {"it", "this", "that", "they", "those"}:
+        if pronoun in resolved_text:
+            nearest_noun = find_nearest_noun(doc, pronoun)
+            if nearest_noun:
+                print(f"Forcing replacement of '{pronoun}' with '{nearest_noun}'")
+                resolved_text = resolved_text.replace(pronoun, nearest_noun)
+
+    return resolved_text
+
+def find_nearest_noun(doc, pronoun):
+    """
+    Ищет ближайшее существительное слева от местоимения.
+    """
+    for token in doc:
+        if token.text.lower() == pronoun:
+            for left in reversed(list(token.lefts)):
+                if left.pos_ in {"NOUN", "PROPN"}:
+                    return left.text
+    return None  # Если не найдено существительное, не заменяем
 
 def get_syntactic_relations(doc):
     """
@@ -103,6 +145,9 @@ def get_syntactic_relations(doc):
                     relations.append((subject, prep_text, object_text))
                     print(f"Adding edge: {subject} --[{prep_text}]--> {object_text}")
 
+    # Удаляем связи, где субъект "that"
+    relations = [rel for rel in relations if rel[0] != "that"]
+
     return relations
 
 
@@ -162,6 +207,7 @@ the features that distinguish life from other phenomena that occur mostly in the
 important to examine the key processes of biological evolution within the framework of
 theoretical physics."""
 # text = 'The cat and the dog eat fish and meat. The elephant and the bear on the mat. The monkey on the table and under the roof.'
+text = resolve_anaphora(text)
 doc = nlp(text)
 
 graph1 = Graph()
@@ -170,7 +216,12 @@ conjunctions = {}
 
 # Добавляем вершины только для именных групп (исключаем глаголы и наречия)
 for chunk in doc.noun_chunks:
-    vertex = Vertex(chunk.text.lower(), [chunk.text.lower()])
+    concept = chunk.text.lower()
+    if concept in {"it", "this", "that", "they", "those"}:  # Фильтр неопределённых местоимений
+        print(f"Skipping vertex: {concept}")
+        continue
+
+    vertex = Vertex(concept, [chunk.text.lower()])
     
     # Проверяем, существует ли вершина с таким концептом
     if vertex.concept not in graph1.vertices:

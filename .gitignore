@@ -1,2 +1,11 @@
-.venv
+.venv**
+venv**
 *.pyc
+.vscode
+embeddings
+stanford-corenlp-4.5.8**
+openie-standalone**
+*.npy
+*.npy
+*/data/*
+*.pickle

@@ -23,7 +23,9 @@ class Graph:
         self.edges: List[Edge] = []
         self.vertex_edges: Dict[str, Set[int]] = defaultdict(set)
 
-    def add_vertex(self, concept: str, words_of_concept: Optional[List[str]] = None) -> None:
+    def add_vertex(
+        self, concept: str, words_of_concept: Optional[List[str]] = None
+    ) -> None:
         """
         Add a vertex to the graph.
 
@@ -42,8 +44,14 @@ class Graph:
 
         self.vertices[concept] = Vertex(concept, words_of_concept)
 
-    def add_edge(self, agent_1: str, agent_2: str, meaning: str,
-                 edge_type: int = 1, parent_subgraph: int = 1) -> None:
+    def add_edge(
+        self,
+        agent_1: str,
+        agent_2: str,
+        meaning: str,
+        edge_type: int = 1,
+        parent_subgraph: int = 1,
+    ) -> None:
         """
         Add an edge between two vertices.
 
@@ -89,6 +97,9 @@ class Graph:
         Raises:
             ValueError: If the vertex doesn't exist
         """
+        if not isinstance(concept, str):
+            raise ValueError("Concept must be a string")
+
         if concept not in self.vertices:
             raise ValueError(f"Vertex '{concept}' does not exist")
 
@@ -107,8 +118,10 @@ class Graph:
         return f"Graph(vertices={len(self.vertices)}, edges={len(self.edges)})"
 
     def __repr__(self) -> str:
-        return (f"Graph(\n\tvertices={list(self.vertices.values())},\n"
-                f"\tedges={self.edges}\n)")
+        return (
+            f"Graph(\n\tvertices={list(self.vertices.values())},\n"
+            f"\tedges={self.edges}\n)"
+        )
 
 
 def visualize_graph(graph: Graph) -> None:
@@ -130,21 +143,19 @@ def visualize_graph(graph: Graph) -> None:
     plt.figure(figsize=(12, 8))
 
     # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue',
-                           node_size=2000, alpha=0.7)
+    nx.draw_networkx_nodes(G, pos, node_color="lightblue", node_size=2000, alpha=0.7)
 
     # Draw edges
-    nx.draw_networkx_edges(G, pos, edge_color='gray',
-                           arrows=True, arrowsize=20)
+    nx.draw_networkx_edges(G, pos, edge_color="gray", arrows=True, arrowsize=20)
 
     # Draw node labels
     nx.draw_networkx_labels(G, pos, font_size=10)
 
     # Draw edge labels
-    edge_labels = nx.get_edge_attributes(G, 'meaning')
+    edge_labels = nx.get_edge_attributes(G, "meaning")
     nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=8)
 
     plt.title("Concept Tree")
-    plt.axis('off')
+    plt.axis("off")
     plt.tight_layout()
     plt.show()

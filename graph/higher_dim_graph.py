@@ -107,7 +107,7 @@ class Graph:
             raise ValueError(f"Vertex with concept '{concept}' already exists")
 
         if words_of_concept is None:
-            words_of_concept = [concept]
+            words_of_concept = [concept.split()]
 
         self.vertices[concept] = Vertex(concept, words_of_concept)
 

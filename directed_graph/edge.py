@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from directed_graph.embedding_manager import get_embedding
+from directed_graph.embedding_manager_fasttext import get_embedding
 
 import numpy as np
 

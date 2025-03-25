@@ -1,13 +1,15 @@
 import os
 
 # requires corenlpserver https://nlp.stanford.edu/software/stanford-corenlp-4.5.8.zip
-os.environ["CORENLP_HOME"] = "/home/kdemyokhin_1/concept-tree-course-work/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
+os.environ["CORENLP_HOME"] = (
+    "/home/kdemyokhin_1/concept-tree-course-work/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
+)
 
 from stanza.server import CoreNLPClient
 
 
 class CoreferenceResolver:
-    def __init__(self, endpoint="http://localhost:9000"):
+    def __init__(self, endpoint=None):
         self.endpoint = endpoint
 
     def resolve_coreferences(self, text, algorithm="neural"):
@@ -32,6 +34,7 @@ class CoreferenceResolver:
             timeout=60000,  # Увеличиваем таймаут
             be_quiet=True,
         ) as client:
+            self.endpoint = client.endpoint
             # Аннотируем текст
             document = client.annotate(text)
 
@@ -88,9 +91,9 @@ class CoreferenceResolver:
             return resolved_text
 
 
-# Пример использования  
+# Пример использования
 if __name__ == "__main__":
-    resolver = CoreferenceResolver("http://localhost:9010")
+    resolver = CoreferenceResolver()
 
     text = """
         John decided to go to the park.

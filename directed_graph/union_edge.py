@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Set
 
 import numpy as np
-from graph.embedding_manager import EmbeddingManager
+from directed_graph.embedding_manager_fasttext import get_embedding
 
 
 @dataclass
@@ -22,4 +22,4 @@ class UnionEdge:
     embedding: np.ndarray = field(init=False)
 
     def __post_init__(self):
-        self.embedding = EmbeddingManager.get_embedding(self.label)
+        self.embedding = get_embedding(self.label)

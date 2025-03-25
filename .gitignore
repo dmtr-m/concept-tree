@@ -2,7 +2,8 @@
 venv**
 *.pyc
 .vscode
-embeddings
+embeddings/*.npy
+embeddings/*.bin
 stanford-corenlp-4.5.8**
 openie-standalone**
 *.npy

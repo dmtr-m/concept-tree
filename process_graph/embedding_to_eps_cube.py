@@ -40,9 +40,9 @@ def split_graph_into_cubes(epsilon: float, vertices: List[Vertex]):
 
 def get_vertices_by_cubes(vertices_to_cubes: List[List[Tuple[NDArray, Vertex]]]) -> List[List[str]]:
     grouped_vertices = [
-        None if len(vertices_to_cubes[0]) == 0 else [set([vertices_to_cubes[0][0][1]])],
-        None if len(vertices_to_cubes[1]) == 0 else [set([vertices_to_cubes[1][0][1]])],
-        None if len(vertices_to_cubes[2]) == 0 else [set([vertices_to_cubes[2][0][1]])],
+        [] if len(vertices_to_cubes[0]) == 0 else [set([vertices_to_cubes[0][0][1]])],
+        [] if len(vertices_to_cubes[1]) == 0 else [set([vertices_to_cubes[1][0][1]])],
+        [] if len(vertices_to_cubes[2]) == 0 else [set([vertices_to_cubes[2][0][1]])],
     ]
 
     for dim in range(len(vertices_to_cubes)): # iterate through [word, bigram, trigram]

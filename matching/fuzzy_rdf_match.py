@@ -193,7 +193,7 @@ class GraphEvaluator:
 class FuzzyRDFMatcher:
     """Fuzzy RDF Graph Matcher using path decomposition and edit distance."""
 
-    def __init__(self, graph: Graph, precision: float = 0.5):
+    def __init__(self, graph: Graph, available_vertices: List[str], precision: float = 0.5):
         """
         Initialize the matcher with a fuzzy RDF graph.
 
@@ -204,7 +204,7 @@ class FuzzyRDFMatcher:
         """
         self.data_graph = graph
         self.precision = precision
-        self.vertex_paths, self.edge_paths = GraphDecomposer.decompose_full_graph(self.data_graph)
+        self.vertex_paths, self.edge_paths = GraphDecomposer.decompose_full_graph(self.data_graph, available_vertices)
 
     def find_paths_candidates(self, query_path: List[Edge]) -> List[List[Edge]]:
         """

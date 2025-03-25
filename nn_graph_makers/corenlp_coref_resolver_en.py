@@ -2,8 +2,8 @@ import os
 
 # requires corenlpserver https://nlp.stanford.edu/software/stanford-corenlp-4.5.8.zip
 os.environ["CORENLP_HOME"] = (
-    # "/home/kdemyokhin_1/concept-tree-course-work/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
-    "/home/simon/Desktop/concept-tree/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
+    "/home/kdemyokhin_1/concept-tree-course-work/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
+    # "/home/simon/Desktop/concept-tree/concept-tree/nn_graph_makers/stanford-corenlp-4.5.8"
 )
 
 from tqdm import tqdm
@@ -11,7 +11,7 @@ from stanza.server import CoreNLPClient
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from find_free_ports import find_free_ports
+from nn_graph_makers.find_free_ports import find_free_ports
 
 import time
 

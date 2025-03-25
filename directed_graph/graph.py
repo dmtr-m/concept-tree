@@ -17,7 +17,7 @@ class Graph:
     Attributes:
         vertices: Dictionary mapping concept names to Vertex objects
         edges: List of Edge objects
-        vertex_edges: Dictionary mapping vertex conce   pts to sets of edge indices
+        vertex_edges: Dictionary mapping vertex concepts to sets of edge indices
     """
 
     def __init__(self) -> None:

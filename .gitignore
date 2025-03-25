@@ -9,3 +9,4 @@ openie-standalone**
 *.npy
 */data/*
 *.pickle
+nn_graph_makers/test_files**

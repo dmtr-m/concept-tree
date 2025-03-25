@@ -301,7 +301,7 @@ def process_files_parallel(
                 futures.append(future)
 
             # Ждем завершени.test_files/я всех задач
-            for future in as_completed(futures):
+            for future in tqdm(as_completed(futures)):
                 results.append(future.result())
     finally:
         # Останавливаем клиенты

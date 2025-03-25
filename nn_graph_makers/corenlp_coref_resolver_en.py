@@ -1,7 +1,7 @@
 import os
 
 # requires corenlpserver https://nlp.stanford.edu/software/stanford-corenlp-4.5.8.zip
-os.environ["CORENLP_HOME"] = "corenlp_triples_maker/stanford-corenlp-4.5.8"
+os.environ["CORENLP_HOME"] = "nn_graph_makers/stanford-corenlp-4.5.8"
 
 from stanza.server import CoreNLPClient
 

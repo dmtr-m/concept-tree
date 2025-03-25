@@ -10,5 +10,6 @@ scikit-learn
 # requires corenlpserver https://nlp.stanford.edu/software/stanford-corenlp-4.5.8.zip
 # in concept-tree/nn_graph_makers dir
 stanza
-
+beautifulsoup4
+lxml
 # https://github.com/dair-iitd/OpenIE-standalone for nn_graph_makers/openie_5_triples_maker_en.py

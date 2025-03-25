@@ -20,6 +20,7 @@ en_core_web_sm = {url = "https://github.com/explosion/spacy-models/releases/down
 stanza = "^1.10.1"
 pandas = "^2.2.3"
 beautifulsoup4 = "^4.13.3"
+lxml = "^5.3.1"
 [tool.poetry.dev-dependencies]
 
 [build-system]

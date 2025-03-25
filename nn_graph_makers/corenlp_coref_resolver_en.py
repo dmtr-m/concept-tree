@@ -204,9 +204,11 @@ class CoreferenceResolver:
 def process_files_parallel(
     total_threads,
     num_servers,
+    max_char_length,
+    memory_per_server,
+    algorithm,
     input_paths,
     output_paths,
-    algorithm="neural",
     start_port=9000,
     verbose=True,
 ):
@@ -245,11 +247,14 @@ def process_files_parallel(
         properties = {
             "annotators": "tokenize,ssplit,pos,lemma,ner,parse,coref",
             "coref.algorithm": algorithm,  # Можно изменить на neural при необходимости
-            "memory": "4G",
         }
 
         resolver = CoreferenceResolver(
-            properties=properties.copy(), endpoint=endpoint, threads=threads
+            properties=properties.copy(),
+            endpoint=endpoint,
+            threads=threads,
+            max_char_length=max_char_length,
+            memory=memory_per_server,
         )
         resolvers.append(resolver)
 
@@ -340,14 +345,14 @@ if __name__ == "__main__":
     #     if os.path.exists(path):
     #         os.remove(path)
 
-    start_time = time.time()
-    resolver = CoreferenceResolver(
-        properties=None,
-        endpoint=f"http://localhost:{find_free_ports(1)[0]}",
-        threads=total_threads,
-        max_char_length=10000,
-        memory=2,
-    )
-    resolver.process_files(input_paths, output_paths, "neural", verbose=False)
-    end_time = time.time()
-    print("Elapsed time:", end_time - start_time)
+    # start_time = time.time()
+    # resolver = CoreferenceResolver(
+    #     properties=None,
+    #     endpoint=f"http://localhost:{find_free_ports(1)[0]}",
+    #     threads=total_threads,
+    #     max_char_length=10000,
+    #     memory=2,
+    # )
+    # resolver.process_files(input_paths, output_paths, "neural", verbose=False)
+    # end_time = time.time()
+    # print("Elapsed time:", end_time - start_time)

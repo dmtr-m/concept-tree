@@ -36,7 +36,7 @@ class CoreferenceResolver:
             endpoint=self.endpoint,
             properties=self.properties,
             threads=self.threads,
-            timeout=60000,  # Увеличиваем таймаут
+            timeout=600000,  # Увеличиваем таймаут
             be_quiet=True,
         )
         self.client.start()  # Явно запускаем клиент
@@ -253,7 +253,6 @@ def process_files_parallel(
             properties=properties.copy(),
             endpoint=endpoint,
             threads=threads,
-            timeout=600000,
             max_char_length=max_char_length,
             memory=memory_per_server,
         )

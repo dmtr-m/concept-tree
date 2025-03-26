@@ -1,8 +1,7 @@
 networkx
-spacy
-coreferee
+spacy==3.5
 nltk
-numpy
+numpy==1.26.4
 pymorphy3
 dawg2-python
 matplotlib

@@ -12,6 +12,7 @@ from graph.vertex import Vertex
 nlp = spacy.load("en_core_web_lg")
 lemmatizer = WordNetLemmatizer()
 
+
 def resolve_anaphora(text):
     """
     Разрешает анафору в тексте, заменяя местоимения на их референты.
@@ -20,7 +21,7 @@ def resolve_anaphora(text):
     resolved_text = text
 
     print("Coreference clusters:")
-    print(doc.spans.get("coref_clusters", []))  # Отладочный вывод
+    print(doc.spans.get("coref_clusters", []))
 
     coref_map = {}  # Словарь замен
 

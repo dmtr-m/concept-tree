@@ -177,7 +177,7 @@ class CoreferenceResolver:
             properties=properties,
             threads=self.threads,
             endpoint=self.endpoint,
-            timeout=60000,  # Увеличиваем таймаут
+            timeout=600000,  # Увеличиваем таймаут
             be_quiet=True,
             max_char_length=self.max_char_length,
             memory=f"{self.memory_in_gs}G",
@@ -253,6 +253,7 @@ def process_files_parallel(
             properties=properties.copy(),
             endpoint=endpoint,
             threads=threads,
+            timeout=600000
             max_char_length=max_char_length,
             memory=memory_per_server,
         )

@@ -152,7 +152,7 @@ class CoreferenceResolver:
             properties=properties,
             threads=self.threads,
             endpoint=self.endpoint,
-            timeout=60000,  # Увеличиваем таймаут
+            timeout=600000,  # Увеличиваем таймаут
             be_quiet=True,
             max_char_length=self.max_char_length,
             memory=f"{self.memory_in_gs}G",

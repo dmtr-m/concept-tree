@@ -13,41 +13,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from nn_graph_makers.find_free_ports import find_free_ports
 
-# from find_free_ports import find_free_ports
-
 import time
 
 
 class CoreferenceResolver:
-    def __init__(self, properties, endpoint, threads, max_char_length, memory=6):
-        self.properties = properties
+    def __init__(
+        self, endpoint, threads, max_char_length, memory=6, algorithm="statistical"
+    ):
         self.endpoint = endpoint
         self.threads = threads
         self.max_char_length = max_char_length
         self.memory_in_gs = memory
+        self.algorithm = algorithm
         self.client = None
-
-    def start_client(self):
-        """
-        Запускает CoreNLPClient.
-        """
-
-        self.client = CoreNLPClient(
-            endpoint=self.endpoint,
-            properties=self.properties,
-            threads=self.threads,
-            timeout=600000,  # Увеличиваем таймаут
-            be_quiet=True,
-        )
-        self.client.start()  # Явно запускаем клиент
-
-    def stop_client(self):
-        """
-        Останавливает CoreNLPClient.
-        """
-        if self.client:
-            self.client.stop()
-            self.client = None
 
     def resolve_coreferences(self, text):
         """
@@ -132,9 +110,7 @@ class CoreferenceResolver:
 
         return resolved_text
 
-    def process_files(
-        self, input_paths, output_paths, algorithm="neural", verbose=True
-    ):
+    def process_files(self, input_paths, output_paths, verbose=True):
         """
         Обрабатывает список файлов, разрешая анафорические ссылки.
         :param input_paths: Список путей до входных файлов.
@@ -147,7 +123,7 @@ class CoreferenceResolver:
         # Настройка properties
         properties = {
             "annotators": "tokenize,ssplit,pos,lemma,ner,parse,coref",
-            "coref.algorithm": algorithm,
+            "coref.algorithm": self.algorithm,
         }
 
         def process_file(input_path, output_path):
@@ -173,11 +149,10 @@ class CoreferenceResolver:
 
         # Поднимаем контекстный менеджер только один раз
         with CoreNLPClient(
-            annotators="tokenize,ssplit,pos,lemma,ner,parse,coref",
             properties=properties,
             threads=self.threads,
             endpoint=self.endpoint,
-            timeout=600000,  # Увеличиваем таймаут
+            timeout=60000,  # Увеличиваем таймаут
             be_quiet=True,
             max_char_length=self.max_char_length,
             memory=f"{self.memory_in_gs}G",
@@ -199,116 +174,6 @@ class CoreferenceResolver:
                 print(e)
 
             return results
-
-
-def process_files_parallel(
-    total_threads,
-    num_servers,
-    max_char_length,
-    memory_per_server,
-    algorithm,
-    input_paths,
-    output_paths,
-    start_port=9000,
-    verbose=True,
-):
-    """
-    Обрабатывает файлы, используя несколько серверов CoreNLP и многопоточность.
-    :param total_threads: Общее количество доступных потоков.
-    :param input_paths: Список путей до входных файлов.
-    :param output_paths: Список путей для сохранения обработанных файлов.
-    :param algorithm: Алгоритм разрешения анафоры: neural, statistical
-    :param start_port: Начальный порт для поиска свободных портов.
-    """
-    if len(input_paths) != len(output_paths):
-        raise ValueError("Количество входных и выходных файлов должно совпадать.")
-
-    # Определяем максимальное количество серверов
-    max_servers = min(len(input_paths), total_threads)  # Не больше файлов и потоков
-
-    # Находим свободные порты
-    free_ports = find_free_ports(max_servers, start_port=start_port)
-    num_servers = min(num_servers, len(free_ports))
-
-    if num_servers == 0:
-        raise RuntimeError(
-            "Нет доступных свободных портов для запуска серверов CoreNLP."
-        )
-
-    # Распределяем потоки между серверами
-    threads_per_server = total_threads // num_servers
-    remaining_threads = total_threads % num_servers
-
-    # Создаем список резолверов
-    resolvers = []
-    for i in range(num_servers):
-        threads = threads_per_server + (1 if i < remaining_threads else 0)
-        endpoint = f"http://localhost:{free_ports[i]}"
-        properties = {
-            "annotators": "tokenize,ssplit,pos,lemma,ner,parse,coref",
-            "coref.algorithm": algorithm,  # Можно изменить на neural при необходимости
-        }
-
-        resolver = CoreferenceResolver(
-            properties=properties.copy(),
-            endpoint=endpoint,
-            threads=threads,
-            max_char_length=max_char_length,
-            memory=memory_per_server,
-        )
-        resolvers.append(resolver)
-
-    # Функция для обработки одного файла
-    def process_file(resolver: CoreferenceResolver, input_path, output_path):
-        try:
-            # Читаем текст из входного файла
-            with open(input_path, "r", encoding="utf-8") as file:
-                text = file.read()
-
-            # Разрешаем анафорические ссылки
-            resolved_text = resolver.resolve_coreferences(text)
-
-            # Сохраняем результат в выходной файл
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            with open(output_path, "w", encoding="utf-8") as file:
-                file.write(resolved_text)
-
-            if verbose:
-                print(f"Processed: {input_path} -> {output_path}")
-            return True
-        except Exception as e:
-            print(f"Error processing file {input_path}: {e}")
-            return False
-
-    # Запускаем клиенты
-    for resolver in resolvers:
-        resolver.start_client()
-
-    # Обработка файлов с использованием многопоточности
-    results = []
-    try:
-        with ThreadPoolExecutor(
-            max_workers=num_servers * threads_per_server
-        ) as executor:
-            futures = []
-            for i, (input_path, output_path) in tqdm(
-                enumerate(zip(input_paths, output_paths))
-            ):
-                resolver = resolvers[i % num_servers]  # Циклический выбор резолвера
-                future = executor.submit(
-                    process_file, resolver, input_path, output_path
-                )
-                futures.append(future)
-
-            # Ждем завершени.test_files/я всех задач
-            for future in tqdm(as_completed(futures)):
-                results.append(future.result())
-    finally:
-        # Останавливаем клиенты
-        for resolver in resolvers:
-            resolver.stop_client()
-
-    return results
 
 
 # Пример использования

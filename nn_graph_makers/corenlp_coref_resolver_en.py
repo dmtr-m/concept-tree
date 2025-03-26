@@ -253,7 +253,7 @@ def process_files_parallel(
             properties=properties.copy(),
             endpoint=endpoint,
             threads=threads,
-            timeout=600000
+            timeout=600000,
             max_char_length=max_char_length,
             memory=memory_per_server,
         )

@@ -2,3 +2,7 @@
 spacy
 # download popular
 nltk
+ipykernel
+tqdm
+pandas
+csv

@@ -29,7 +29,7 @@ class Edge:
     embedding: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
-        self.embedding = get_embedding(self.label)
+        self.embedding = get_embedding(self.label.split())
 
     def __repr__(self) -> str:
         return f"Edge({self.agent_1} <--[{self.label}]--> {self.agent_2})"

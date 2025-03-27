@@ -5,4 +5,3 @@ nltk
 ipykernel
 tqdm
 pandas
-csv

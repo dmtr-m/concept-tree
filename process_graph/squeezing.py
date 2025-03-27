@@ -11,7 +11,7 @@ from directed_graph.vertex import Vertex
 
 import numpy as np
 
-def squeeze(vertices: list[Vertex]) -> list[tuple[dict[str, str], dict[str, list[str]]]]:
+def squeeze(eps: tuple[float], vertices: list[Vertex]) -> list[tuple[dict[str, str], dict[str, list[str]]]]:
     words = dict()
     bigrams = dict()
     trigrams = dict()
@@ -24,9 +24,9 @@ def squeeze(vertices: list[Vertex]) -> list[tuple[dict[str, str], dict[str, list
         if len(vertex.words_of_concept) == 3:
             trigrams[vertex.concept] = vertex.embedding
     
-    words_word_to_cluster, words_merged_words = squeeze_by_dict(words, 0.075)
-    bigrams_word_to_cluster, bigrams_merged_words = squeeze_by_dict(bigrams, 0.075)
-    trigrams_word_to_cluster, trigrams_merged_words = squeeze_by_dict(trigrams, 0.075)
+    words_word_to_cluster, words_merged_words = squeeze_by_dict(words, eps[0])
+    bigrams_word_to_cluster, bigrams_merged_words = squeeze_by_dict(bigrams, eps[1])
+    trigrams_word_to_cluster, trigrams_merged_words = squeeze_by_dict(trigrams, eps[2])
 
     return [
         (words_word_to_cluster, words_merged_words),

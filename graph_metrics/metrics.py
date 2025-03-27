@@ -31,37 +31,42 @@ class GraphMetrics:
         """
         nx_graph = nx.Graph()
 
-        # Group vertices by their vertex_type
-        vertex_type_map = defaultdict(list)
-        for vertex in graph.vertices.values():
-            vertex_type_map[vertex.vertex_type].append(vertex.concept)
-
-        # Add merged vertices (logical nodes)
-        for vertex_type, concepts in vertex_type_map.items():
-            merged_vertex_name = f"Type_{vertex_type}"
-            nx_graph.add_node(merged_vertex_name, concepts=concepts)
-
-        # Group edges by their edge_type
-        edge_type_map = defaultdict(set)
         for edge in graph.get_edges():
-            agent_1 = graph.vertices[edge.agent_1]
-            agent_2 = graph.vertices[edge.agent_2]
+            nx_graph.add_node(edge.agent_1)
+            nx_graph.add_node(edge.agent_2)
+            nx_graph.add_edge(edge.agent_1, edge.agent_2)
 
-            merged_vertex_1 = f"Type_{agent_1.vertex_type}"
-            merged_vertex_2 = f"Type_{agent_2.vertex_type}"
+        # # Group vertices by their vertex_type
+        # vertex_type_map = defaultdict(list)
+        # for vertex in graph.vertices.values():
+        #     vertex_type_map[vertex.vertex_type].append(vertex.concept)
 
-            if merged_vertex_1 != merged_vertex_2:  # Avoid self-loops
-                edge_key = (merged_vertex_1, merged_vertex_2, edge.edge_type)
-                edge_type_map[edge_key].add(edge.label)
+        # # Add merged vertices (logical nodes)
+        # for vertex_type, concepts in vertex_type_map.items():
+        #     merged_vertex_name = f"Type_{vertex_type}"
+        #     nx_graph.add_node(merged_vertex_name, concepts=concepts)
 
-        # Add merged edges (logical edges)
-        for (vertex_1, vertex_2, edge_type), labels in edge_type_map.items():
-            merged_edge_label = ", ".join(
-                sorted(labels)
-            )  # Combine all labels for the same edge_type
-            nx_graph.add_edge(
-                vertex_1, vertex_2, label=merged_edge_label, edge_type=edge_type
-            )
+        # # Group edges by their edge_type
+        # edge_type_map = defaultdict(set)
+        # for edge in graph.get_edges():
+        #     agent_1 = graph.vertices[edge.agent_1]
+        #     agent_2 = graph.vertices[edge.agent_2]
+
+        #     merged_vertex_1 = f"Type_{agent_1.vertex_type}"
+        #     merged_vertex_2 = f"Type_{agent_2.vertex_type}"
+
+        #     if merged_vertex_1 != merged_vertex_2:  # Avoid self-loops
+        #         edge_key = (merged_vertex_1, merged_vertex_2, edge.edge_type)
+        #         edge_type_map[edge_key].add(edge.label)
+
+        # # Add merged edges (logical edges)
+        # for (vertex_1, vertex_2, edge_type), labels in edge_type_map.items():
+        #     merged_edge_label = ", ".join(
+        #         sorted(labels)
+        #     )  # Combine all labels for the same edge_type
+        #     nx_graph.add_edge(
+        #         vertex_1, vertex_2, label=merged_edge_label, edge_type=edge_type
+        #     )
 
         return nx_graph
 
@@ -247,3 +252,160 @@ class GraphMetrics:
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.grid(True, linestyle="--", alpha=0.5)
+
+    def detect_hubs_with_metrics(
+        self,
+        degree_weight: float = 0.4,
+        betweenness_weight: float = 0.3,
+        closeness_weight: float = 0.3,
+        threshold: float = None,
+        top_n: int = None,
+    ) -> List[str]:
+        """
+        Detects hub vertices in the graph based on a combination of metrics.
+
+        Args:
+            Same as before.
+
+        Returns:
+            List[str]: List of hub vertex names.
+        """
+        if threshold is not None and top_n is not None:
+            raise ValueError("Only one of 'threshold' or 'top_n' can be specified.")
+
+        # Calculate individual metrics
+        degree_centrality = nx.degree_centrality(self.nx_graph)
+        betweenness_centrality = nx.betweenness_centrality(self.nx_graph)
+        closeness_centrality = nx.closeness_centrality(self.nx_graph)
+
+        # Normalize weights
+        total_weight = degree_weight + betweenness_weight + closeness_weight
+        degree_weight /= total_weight
+        betweenness_weight /= total_weight
+        closeness_weight /= total_weight
+
+        # Compute composite score for each node
+        composite_scores = {}
+        for node in self.nx_graph.nodes:
+            degree_score = degree_centrality[node]
+            betweenness_score = betweenness_centrality[node]
+            closeness_score = closeness_centrality[node]
+
+            # Assortativity contribution is global, so we distribute it evenly
+            composite_score = (
+                degree_weight * degree_score
+                + betweenness_weight * betweenness_score
+                + closeness_weight * closeness_score
+            )
+            composite_scores[node] = composite_score
+
+        # Select hubs based on threshold or top_n
+        if threshold is not None:
+            hubs = [
+                node for node, score in composite_scores.items() if score >= threshold
+            ]
+        elif top_n is not None:
+            sorted_nodes = sorted(
+                composite_scores.items(), key=lambda x: x[1], reverse=True
+            )
+            hubs = [node for node, _ in sorted_nodes[:top_n]]
+        else:
+            raise ValueError("Either 'threshold' or 'top_n' must be specified.")
+
+        return hubs
+
+    def get_hub_labels(self, hubs: List[str]) -> Dict[str, str]:
+        """
+        Retrieves labels for the given hub nodes.
+
+        Args:
+            hubs (List[str]): List of hub node names.
+
+        Returns:
+            Dict[str, str]: Dictionary mapping hub names to their labels.
+        """
+        hub_labels = {}
+        for hub in hubs:
+            # Get the label from node attributes, defaulting to the node name itself
+            label = self.nx_graph.nodes[hub].get("label", hub)
+            hub_labels[hub] = label
+        return hub_labels
+
+    def plot_hub_detection_with_metrics_and_labels(
+        self,
+        degree_weight: float = 0.4,
+        betweenness_weight: float = 0.3,
+        closeness_weight: float = 0.3,
+        threshold: float = None,
+        top_n: int = None,
+    ):
+        """
+        Plots the graph with detected hubs highlighted and displays their labels.
+
+        Args:
+            Same as `detect_hubs_with_metrics`.
+        """
+        hubs = self.detect_hubs_with_metrics(
+            degree_weight=degree_weight,
+            betweenness_weight=betweenness_weight,
+            closeness_weight=closeness_weight,
+            threshold=threshold,
+            top_n=top_n,
+        )
+        hub_set = set(hubs)
+        hub_labels = self.get_hub_labels(hubs)
+
+        # Draw the graph
+        pos = nx.spring_layout(self.nx_graph, seed=42)  # Layout for visualization
+        plt.figure(figsize=(10, 8))
+
+        # Draw non-hub nodes
+        non_hub_nodes = [node for node in self.nx_graph.nodes if node not in hub_set]
+        nx.draw_networkx_nodes(
+            self.nx_graph,
+            pos,
+            nodelist=non_hub_nodes,
+            node_color="lightblue",
+            node_size=300,
+            label="Non-Hub Nodes",
+        )
+
+        # Draw hub nodes
+        nx.draw_networkx_nodes(
+            self.nx_graph,
+            pos,
+            nodelist=hubs,
+            node_color="red",
+            node_size=500,
+            label="Hub Nodes",
+        )
+
+        # Draw edges
+        nx.draw_networkx_edges(self.nx_graph, pos, alpha=0.5, edge_color="gray")
+
+        # Draw labels for all nodes
+        all_labels = {
+            node: self.nx_graph.nodes[node].get("label", node)
+            for node in self.nx_graph.nodes
+        }
+        nx.draw_networkx_labels(
+            self.nx_graph, pos, labels=all_labels, font_size=10, font_color="black"
+        )
+
+        # Highlight hub labels
+        for hub, label in hub_labels.items():
+            x, y = pos[hub]
+            plt.text(
+                x,
+                y + 0.05,
+                label,
+                fontsize=9,
+                ha="center",
+                color="darkred",
+                bbox=dict(facecolor="white", alpha=0.7),
+            )
+
+        plt.title("Graph with Detected Hubs and Labels")
+        plt.legend(loc="upper right")
+        plt.axis("off")
+        plt.show()

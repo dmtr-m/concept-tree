@@ -1,6 +1,4 @@
 import spacy
-import spacy.cli
-import spacy_experimental
 from nltk.stem import WordNetLemmatizer
 from graph.higher_dim_graph import Graph
 from graph.graph import visualize_graph
@@ -53,7 +51,7 @@ def find_nearest_noun(doc, pronoun):
                     return left.text
     return None  # Если не найдено существительное, не заменяем
 
-def get_syntactic_relations(doc):
+def get_syntactic_relations(doc, lemmatizer):
     """
     Извлекает синтаксические связи (именные группы, включая прилагательные и артикли) из текста.
     Обрабатывает сочетания глагола с предлогом как единое ребро.
@@ -232,7 +230,7 @@ for chunk in doc.noun_chunks:
     chunk_to_vertex[chunk.root.lower] = vertex
 
 # Получаем синтаксические связи с помощью get_syntactic_relations
-relations = get_syntactic_relations(doc)
+relations = get_syntactic_relations(doc, lemmatizer)
 print('RELATIONS', relations)
 # Добавляем рёбра в граф
 for relation in relations:

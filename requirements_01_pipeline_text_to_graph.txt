@@ -1,0 +1,4 @@
+# download en_core_web_lg model
+spacy
+# download popular
+nltk

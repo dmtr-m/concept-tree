@@ -4,6 +4,7 @@ venv**
 .vscode
 embeddings/*.npy
 embeddings/*.bin
+process_graph/articles_triples
 stanford-corenlp-4.5.8**
 openie-standalone**
 *.npy

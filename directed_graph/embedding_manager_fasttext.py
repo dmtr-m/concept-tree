@@ -4,7 +4,7 @@ import spacy
 import fasttext
 
 
-ft = fasttext.load_model("embeddings/cc.en.100.bin")
+ft = fasttext.load_model("embeddings/cc.en.300.bin")
 embeddings_shape = ft.get_word_vector("apple").shape
 
 # Load the English NLP model from spaCy

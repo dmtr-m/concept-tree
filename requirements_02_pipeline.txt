@@ -1,0 +1,11 @@
+pickle
+networkx
+matplotlib
+numpy
+# en_core_web_sm
+spacy
+# embeddings/cc.en.100.bin
+fasttext
+sklearn
+plotly
+nbformat

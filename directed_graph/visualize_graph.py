@@ -93,7 +93,7 @@ def visualize_graph_ngrams(graph: Graph):
 
     def colour(vertex: Vertex) -> str:
         colours = ["red", "green", "blue"]
-        return colours[len(vertex.words_of_concept) - 1]
+        return colours[min(len(vertex.words_of_concept), len(colours)) - 1]
 
     # Extract vertex coordinates
     x_nodes, y_nodes, z_nodes = [], [], []
@@ -189,7 +189,7 @@ def visualize_graph_ngrams_with_pca(graph: Graph):
 
     def colour(vertex: Vertex) -> str:
         colours = ["red", "green", "blue"]
-        return colours[len(vertex.words_of_concept) - 1]
+        return colours[min(len(vertex.words_of_concept), len(colours)) - 1]
 
     # Group vertices by their z-coordinate
     z_groups = defaultdict(list)

@@ -10,12 +10,14 @@ from directed_graph.graph import Edge
 
 import numpy as np
 from sklearn.cluster import DBSCAN
-from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from sklearn.metrics import (
     silhouette_score,
     davies_bouldin_score,
     calinski_harabasz_score,
 )
+from sklearn.preprocessing import normalize
+
 from itertools import product
 from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
@@ -24,17 +26,21 @@ from sklearn.decomposition import PCA
 import plotly.graph_objects as go
 
 
+from sklearn.preprocessing import normalize
+
+
 def cluster_and_evaluate_all_sizes(
-    edges: List[Dict], params_by_size: Dict[int, Dict[str, float]]
+    edges: List[Dict],
+    params_by_size: Dict[int, Dict[str, float]],
+    standardize: bool = False,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[int, Dict[str, str]]]:
     """
     Кластеризует ребра с разными размерами эмбеддингов и вычисляет метрики качества кластеризации.
-
     Args:
         edges: Список объектов Edge, каждый из которых содержит поле `embedding`.
         params_by_size: Словарь параметров для каждой размерности эмбеддингов.
                         Пример: {300: {"eps": 0.5, "min_samples": 2}, 768: {"eps": 0.3, "min_samples": 5}}
-
+        standardize: Флаг для нормализации эмбеддингов по евклидовой норме.
     Returns:
         Кортеж из двух элементов:
             1. Словарь метрик качества кластеризации для каждой группы размерностей.
@@ -57,13 +63,16 @@ def cluster_and_evaluate_all_sizes(
         embeddings = np.array([edge.embedding for edge in group])
         edge_ids = [edge.label for edge in group]  # Идентификаторы ребер
 
+        # Нормализация эмбеддингов, если флаг standardize=True
+        if standardize:
+            embeddings = normalize(embeddings, norm="l2", axis=1)
+
         # Параметры для текущей размерности
         if embedding_size not in params_by_size:
             print(
                 f"Warning: No parameters provided for embedding size {embedding_size}. Skipping."
             )
             continue
-
         params = params_by_size[embedding_size]
         eps = params.get("eps", 0.5)
         min_samples = params.get("min_samples", 2)
@@ -105,7 +114,7 @@ def cluster_and_evaluate_with_matching(
                - Значение: идентификатор центрального ребра для данного кластера.
     """
     # Кластеризация с использованием DBSCAN
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric="euclidean")
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine")
     labels = dbscan.fit_predict(embeddings)
 
     # Инициализация словаря метрик
@@ -118,7 +127,7 @@ def cluster_and_evaluate_with_matching(
         try:
             # Silhouette Score
             metrics["Silhouette Score"] = silhouette_score(
-                embeddings, labels, metric="euclidean"
+                embeddings, labels, metric="cosine"
             )
         except ValueError:
             metrics["Silhouette Score"] = None  # Если не хватает данных для вычисления
@@ -222,18 +231,20 @@ def grid_search_cluster_params(
     eps_values: List[float] = None,
     min_samples_values: List[int] = None,
     metric_weights: Dict[str, float] = None,
+    optimal_cluster_range: Tuple[int, int] = (3, 10),
+    standardize: bool = False,  # Новый параметр
 ) -> Tuple[Dict[int, Dict[str, float]], Dict[int, Dict[str, float]]]:
     """
     Выполняет Grid Search для выбора оптимальных параметров кластеризации
-    с учетом нескольких метрик.
-
+    с учетом нескольких метрик, включая штраф за количество кластеров.
     Args:
         edges: Список объектов Edge, каждый из которых содержит поле `embedding`.
         embedding_sizes: Список размерностей эмбеддингов.
         eps_values: Список значений eps для перебора (если None, определяется автоматически).
         min_samples_values: Список значений min_samples для перебора.
         metric_weights: Веса для каждой метрики (по умолчанию все метрики равнозначны).
-
+        optimal_cluster_range: Диапазон оптимального числа кластеров (min_clusters, max_clusters).
+        standardize: Флаг для нормализации эмбеддингов по евклидовой норме.
     Returns:
         Кортеж из двух элементов:
             1. Словарь оптимальных параметров для каждой размерности.
@@ -241,17 +252,16 @@ def grid_search_cluster_params(
     """
     if min_samples_values is None:
         min_samples_values = [2, 3, 5]
-
     if metric_weights is None:
-        # По умолчанию все метрики равнозначны
         metric_weights = {
-            "Silhouette Score": 1.0,
+            "Silhouette Score": 2.0,
             "Davies-Bouldin Index": -1.0,  # Минимизация
             "Calinski-Harabasz Index": 1.0,
             "Dunn Index": 1.0,
             "Connectivity Score": -1.0,  # Минимизация
             "Intra-Cluster Variance": -1.0,  # Минимизация
-            "Noise Ratio": -1.0,  # Минимизация
+            "Noise Ratio": -3.0,  # Минимизация
+            "Cluster Count Penalty": -2.0,  # Штраф за количество кластеров
         }
 
     # Группировка ребер по размеру эмбеддинга
@@ -275,6 +285,10 @@ def grid_search_cluster_params(
             [edge.embedding for edge in embedding_size_groups[embedding_size]]
         )
 
+        # Нормализация эмбеддингов, если флаг standardize=True
+        if standardize:
+            embeddings = normalize(embeddings, norm="l2", axis=1)
+
         # Автоматическое определение диапазона eps, если он не задан
         if eps_values is None:
             distances = euclidean_distances(embeddings)
@@ -291,23 +305,19 @@ def grid_search_cluster_params(
 
         # Перебор всех комбинаций параметров
         for eps, min_samples in param_combinations:
-            dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric="euclidean")
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine")
             labels = dbscan.fit_predict(embeddings)
 
             # Вычисление метрик
             metrics = {}
-            unique_labels = sorted(
-                set(labels) - {-1}
-            )  # Преобразуем множество в отсортированный список
-
+            unique_labels = sorted(set(labels) - {-1})  # Исключаем шумовые точки (-1)
             if len(unique_labels) > 1:
                 try:
                     metrics["Silhouette Score"] = silhouette_score(
-                        embeddings, labels, metric="euclidean"
+                        embeddings, labels, metric="cosine"
                     )
                 except ValueError:
                     metrics["Silhouette Score"] = -np.inf
-
                 metrics["Davies-Bouldin Index"] = davies_bouldin_score(
                     embeddings, labels
                 )
@@ -352,7 +362,6 @@ def grid_search_cluster_params(
                     return score / (len(embeddings) * n_neighbors)
 
                 metrics["Connectivity Score"] = connectivity_score(embeddings, labels)
-
                 # Intra-Cluster Variance
                 intra_variance = []
                 for label in unique_labels:
@@ -364,11 +373,23 @@ def grid_search_cluster_params(
                 metrics["Intra-Cluster Variance"] = (
                     np.mean(intra_variance) if intra_variance else None
                 )
-
                 # Noise Ratio
                 noise_ratio = sum(1 for label in labels if label == -1) / len(labels)
                 metrics["Noise Ratio"] = noise_ratio
-
+                # Cluster Count Penalty
+                num_clusters = len(unique_labels)
+                min_clusters, max_clusters = optimal_cluster_range
+                if num_clusters < min_clusters:
+                    penalty = (
+                        min_clusters - num_clusters
+                    ) ** 2  # Штраф за слишком мало кластеров
+                elif num_clusters > max_clusters:
+                    penalty = (
+                        num_clusters - max_clusters
+                    ) ** 2  # Штраф за слишком много кластеров
+                else:
+                    penalty = 0  # Нет штрафа в оптимальном диапазоне
+                metrics["Cluster Count Penalty"] = penalty
             else:
                 metrics = {
                     "Silhouette Score": -np.inf,
@@ -378,6 +399,7 @@ def grid_search_cluster_params(
                     "Connectivity Score": np.inf,
                     "Intra-Cluster Variance": np.inf,
                     "Noise Ratio": 1.0,  # Все точки — шум
+                    "Cluster Count Penalty": np.inf,  # Максимальный штраф
                 }
 
             # Проверка на наличие бесконечных значений
@@ -397,10 +419,11 @@ def grid_search_cluster_params(
                     "Connectivity Score",
                     "Intra-Cluster Variance",
                     "Noise Ratio",
+                    "Cluster Count Penalty",
                 ]:
-                    normalized_value = 1 / (1 + value)  # Минимизация
+                    normalized_value = 1 / (1 + value + 0.001)  # Минимизация
                 else:
-                    normalized_value = value / (1 + value)  # Максимизация
+                    normalized_value = value / (1 + value + 0.001)  # Максимизация
                 aggregated_score += weight * normalized_value
 
             # Обновление лучших параметров
@@ -409,19 +432,11 @@ def grid_search_cluster_params(
                 best_params = {"eps": eps, "min_samples": min_samples}
                 best_metrics = metrics
 
-            # Печать текущих метрик
-            # print(
-            # f"Embedding size {embedding_size}, eps={eps:.4f}, min_samples={min_samples}:"
-            # )
-            # for metric_name, value in metrics.items():
-            # print(f"  {metric_name}: {value}")
-
         # Сохранение результатов
         if best_params is not None:
             best_params_by_size[embedding_size] = best_params
             best_metrics_by_size[embedding_size] = best_metrics
-
-            print(f"\nEmbedding size {embedding_size}: Best params = {best_params}")
+            print(f"Embedding size {embedding_size}: Best params = {best_params}")
             print("Best Metrics:")
             for metric_name, value in best_metrics.items():
                 print(f"  {metric_name}: {value}")
@@ -458,7 +473,7 @@ def analyze_distance_distributions(edges: list) -> Dict[int, Dict[str, float]]:
         embeddings = np.array([edge.embedding for edge in group])
 
         # Вычисление попарных евклидовых расстояний
-        distances = euclidean_distances(embeddings)
+        distances = cosine_distances(embeddings)
         distances = distances[
             np.triu_indices_from(distances, k=1)
         ]  # Верхний треугольник матрицы без диагонали

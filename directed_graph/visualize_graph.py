@@ -174,6 +174,7 @@ def visualize_graph_ngrams(graph: Graph):
         #     zaxis=dict(range=[-.05, 1])  # Z-axis limits
         # )
     )
+    fig.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False )
 
     fig.show()
 
@@ -330,5 +331,6 @@ def visualize_graph_ngrams_with_pca(graph: Graph):
         width=1000,  # Width in pixels
         height=1000,  # Height in pixels
     )
+    fig.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False )
 
     fig.show()

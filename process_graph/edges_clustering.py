@@ -31,15 +31,42 @@ from sklearn.preprocessing import normalize
 from scipy.sparse import csr_matrix
 
 
+def extract_unique_sorted_embeddings(edges: List[Edge]) -> List[List[float]]:
+    """
+    Извлекает эмбеддинги с уникальными label и сортирует их лексикографически по label.
+
+    Args:
+        edges: Список объектов Edge, каждый из которых содержит поля `embedding` и `label`.
+
+    Returns:
+        Список эмбеддингов, отсортированный лексикографически по label.
+    """
+    # Группировка ребер по label (только уникальные label)
+    unique_labels = {}
+    for edge in edges:
+        if edge.label not in unique_labels:
+            unique_labels[edge.label] = edge
+
+    # Сортировка label лексикографически
+    sorted_labels = sorted(unique_labels.keys())
+
+    # Извлечение эмбеддингов в порядке отсортированных label
+    sorted_embeddings = [unique_labels[label].embedding for label in sorted_labels]
+
+    return sorted_labels, sorted_embeddings
+
+
 def cluster_and_evaluate_all_sizes(
-    edges: List[Dict],
+    embeddings_list: List[np.ndarray],
+    labels_list: List[str],
     params_by_size: Dict[int, Dict[str, Any]],
     standardize: bool = False,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[int, Dict[str, str]]]:
     """
-    Кластеризует ребра с разными размерами эмбеддингов и вычисляет метрики качества кластеризации.
+    Кластеризует эмбеддинги с разными размерами и вычисляет метрики качества кластеризации.
     Args:
-        edges: Список объектов Edge, каждый из которых содержит поле `embedding`.
+        embeddings_list: Список эмбеддингов (np.ndarray).
+        labels_list: Список соответствующих лейблов для эмбеддингов.
         params_by_size: Словарь параметров для каждой размерности эмбеддингов.
                         Пример: {300: {"model": "DBSCAN", "params": {"eps": 0.5, "min_samples": 2}},
                                  768: {"model": "AgglomerativeClustering", "params": {"n_clusters": 10}}}
@@ -52,19 +79,22 @@ def cluster_and_evaluate_all_sizes(
                - Второй уровень: словарь, где ключ — это уникальный идентификатор ребра,
                  а значение — метка центрального ребра для данного кластера.
     """
-    # Группировка ребер по размеру эмбеддинга
+    if len(embeddings_list) != len(labels_list):
+        raise ValueError("embeddings_list and labels_list must have the same length.")
+
+    # Группировка эмбеддингов по их размеру
     embedding_size_groups = defaultdict(list)
-    for edge in edges:
-        embedding_size = len(edge.embedding)
-        embedding_size_groups[embedding_size].append(edge)
+    for emb, label in zip(embeddings_list, labels_list):
+        embedding_size = len(emb)
+        embedding_size_groups[embedding_size].append((emb, label))
 
     all_metrics = {}
     all_matching = {}
 
-    # Обработка каждой группы ребер с одинаковым размером эмбеддинга
+    # Обработка каждой группы эмбеддингов с одинаковым размером
     for embedding_size, group in embedding_size_groups.items():
-        embeddings = np.array([edge.embedding for edge in group])
-        edge_ids = [edge.label for edge in group]  # Идентификаторы ребер
+        embeddings = np.array([item[0] for item in group])  # Эмбеддинги
+        edge_ids = [item[1] for item in group]  # Идентификаторы
 
         # Нормализация эмбеддингов, если флаг standardize=True
         if standardize:
@@ -115,7 +145,7 @@ def cluster_and_evaluate_with_matching(
 
     Args:
         embeddings: Массив эмбеддингов (размерность: [n_samples, n_features]).
-        edge_labels: Список идентификаторов ребер, соответствующих эмбеддингам.
+        edge_labels: Список идентификаторов, соответствующих эмбеддингам.
         model: Объект модели для кластеризации (например, DBSCAN или AgglomerativeClustering).
 
     Returns:
@@ -237,7 +267,7 @@ def cluster_and_evaluate_with_matching(
 
 
 def grid_search_cluster_params(
-    edges: List[Edge],
+    unique_edges_ebs: List[np.ndarray],
     embedding_sizes: List[int],
     model_param_grid: Dict[str, Dict[str, list]],
     metric_weights: Dict[str, float] = None,
@@ -270,9 +300,9 @@ def grid_search_cluster_params(
 
     # Группировка ребер по размеру эмбеддинга
     embedding_size_groups = defaultdict(list)
-    for edge in edges:
-        embedding_size = len(edge.embedding)
-        embedding_size_groups[embedding_size].append(edge)
+    for edge_emb in unique_edges_ebs:
+        embedding_size = len(edge_emb)
+        embedding_size_groups[embedding_size].append(edge_emb)
 
     best_params_by_size = {}
     best_metrics_by_size = {}
@@ -286,8 +316,8 @@ def grid_search_cluster_params(
             continue
 
         # Выбираем только ребра с текущей размерностью эмбеддинга
-        filtered_edges = embedding_size_groups[embedding_size]
-        embeddings = np.array([edge.embedding for edge in filtered_edges])
+        embeddings = np.array(embedding_size_groups[embedding_size])
+        # embeddings = np.array([edge.embedding for edge in filtered_edges])
 
         # Нормализация эмбеддингов, если флаг standardize=True
         if standardize:
@@ -491,85 +521,95 @@ def grid_search_cluster_params(
 
 
 def compute_connectivity_matrix(
-    edges: List[Edge],  # Список объектов Edge
-    embedding_sizes: List[int],  # Список размеров эмбеддингов
-    matrix_type: str = "adjacency",  # Тип матрицы связности
+    edges: List[Edge],
+    embedding_sizes: List[int],
+    matrix_type: str = "adjacency",
 ) -> Dict[int, csr_matrix]:
-    """
-    Вычисляет разреженные матрицы связности для каждого указанного размера эмбеддинга.
-
-    Args:
-        edges: Список объектов Edge.
-        embedding_sizes: Список размеров эмбеддингов.
-        matrix_type: Тип матрицы связности. Доступные варианты:
-            - "adjacency": Матрица на основе смежности ребер.
-            - "shortest_path": Матрица на основе кратчайших путей между узлами ребер.
-
-    Returns:
-        Словарь, где ключи — размеры эмбеддингов, а значения — соответствующие матрицы связности (csr_matrix).
-    """
     connectivity_matrices = {}
 
     for emb_size in embedding_sizes:
-        # Фильтрация ребер по текущему размеру эмбеддинга
         filtered_edges = [edge for edge in edges if len(edge.embedding) == emb_size]
         if not filtered_edges:
             print(f"Warning: No edges found for embedding size {emb_size}. Skipping.")
             continue
 
-        n_edges = len(filtered_edges)
+        label_to_edges = defaultdict(list)
+        for edge in filtered_edges:
+            label_to_edges[edge.label].append(edge)
+
+        unique_labels = sorted(list(label_to_edges.keys()))
+        n_unique_labels = len(unique_labels)
+
         data = []
         row_indices = []
         col_indices = []
 
         if matrix_type == "adjacency":
             # Матрица на основе смежности ребер
-            for i, edge1 in enumerate(filtered_edges):
-                for j, edge2 in enumerate(filtered_edges):
-                    if i == j or set([edge1.agent_1, edge1.agent_2]).intersection(
-                        [edge2.agent_1, edge2.agent_2]
-                    ):
-                        data.append(1)
-                        row_indices.append(i)
-                        col_indices.append(j)
+            for i, label1 in enumerate(unique_labels):
+                for j, label2 in enumerate(unique_labels):
+                    edges1 = label_to_edges[label1]
+                    edges2 = label_to_edges[label2]
+
+                    # Проверяем смежность хотя бы одного ребра из группы label1 с любым ребром из группы label2
+                    for edge1 in edges1:
+                        for edge2 in edges2:
+                            if set([edge1.agent_1, edge1.agent_2]).intersection(
+                                [edge2.agent_1, edge2.agent_2]
+                            ):
+                                data.append(1)
+                                row_indices.append(i)
+                                col_indices.append(j)
+                                break
 
         elif matrix_type == "shortest_path":
-            # Матрица на основе кратчайших путей между узлами ребер
-            from networkx import Graph
-            from networkx.algorithms.shortest_paths.generic import shortest_path_length
+            from networkx import Graph as NXGraph
+            from networkx.algorithms.shortest_paths.dense import floyd_warshall_numpy
 
-            graph = Graph()
+            graph = NXGraph()
             for edge in filtered_edges:
                 graph.add_edge(edge.agent_1, edge.agent_2)
 
-            for i, edge1 in enumerate(filtered_edges):
-                for j, edge2 in enumerate(filtered_edges):
-                    if i == j:
-                        data.append(0)  # Расстояние до самого себя
+            # Предварительное вычисление всех кратчайших путей
+            node_list = list(graph.nodes)
+            distance_matrix = floyd_warshall_numpy(graph, nodelist=node_list)
+
+            for i, label1 in enumerate(unique_labels):
+                for j, label2 in enumerate(unique_labels):
+                    edges1 = label_to_edges[label1]
+                    edges2 = label_to_edges[label2]
+
+                    # Получаем множества узлов для групп label1 и label2
+                    nodes1 = {
+                        node_list.index(node)
+                        for node in {edge.agent_1 for edge in edges1}.union(
+                            {edge.agent_2 for edge in edges1}
+                        )
+                    }
+                    nodes2 = {
+                        node_list.index(node)
+                        for node in {edge.agent_1 for edge in edges2}.union(
+                            {edge.agent_2 for edge in edges2}
+                        )
+                    }
+
+                    # Находим минимальное расстояние между группами
+                    min_distance = float("inf")
+                    for node1 in nodes1:
+                        for node2 in nodes2:
+                            if distance_matrix[node1, node2] < min_distance:
+                                min_distance = distance_matrix[node1, node2]
+
+                    if min_distance < float("inf"):
+                        data.append(min_distance)
                         row_indices.append(i)
                         col_indices.append(j)
-                    else:
-                        try:
-                            # Расстояние между узлами первого и второго ребра
-                            dist_source = shortest_path_length(
-                                graph, edge1.agent_1, edge2.agent_1
-                            )
-                            dist_target = shortest_path_length(
-                                graph, edge1.agent_2, edge2.agent_2
-                            )
-                            distance = dist_source + dist_target
-                            data.append(distance)
-                            row_indices.append(i)
-                            col_indices.append(j)
-                        except:
-                            continue  # Пропускаем, если пути нет
 
         else:
             raise ValueError(f"Неизвестный тип матрицы: {matrix_type}")
 
-        # Создаем разреженную матрицу
         connectivity_matrix = csr_matrix(
-            (data, (row_indices, col_indices)), shape=(n_edges, n_edges)
+            (data, (row_indices, col_indices)), shape=(n_unique_labels, n_unique_labels)
         )
         connectivity_matrices[emb_size] = connectivity_matrix
 
@@ -577,13 +617,14 @@ def compute_connectivity_matrix(
 
 
 def analyze_distance_distributions(
-    edges: List[Dict], metric: str = "cosine"
+    edges_embeddings: np.ndarray, metric: str = "cosine"
 ) -> Dict[int, Dict[str, float]]:
     """
-    Анализирует распределение попарных расстояний для эмбеддингов с разными размерностями.
+    Анализирует распределение попарных расстояний для эмбеддингов с разными размерностями,
+    используя только ребра с уникальными значениями поля `label`.
 
     Args:
-        edges: Список объектов Edge, каждый из которых содержит поле `embedding`.
+        edges_embeddings: Список уникальных эмбеддингов
         metric: Метрика для вычисления расстояний ("cosine" или "euclidean").
 
     Returns:
@@ -591,23 +632,23 @@ def analyze_distance_distributions(
             - "median_distance": Медиана расстояний.
             - "percentile_90": 90-й процентиль расстояний.
     """
+
     # Группировка ребер по размеру эмбеддинга
     embedding_size_groups = defaultdict(list)
-    for edge in edges:
-        embedding_size = len(edge.embedding)
-        embedding_size_groups[embedding_size].append(edge)
+    for edge_emb in edges_embeddings:
+        embedding_size = len(edge_emb)
+        embedding_size_groups[embedding_size].append(edge_emb)
 
     distance_stats_by_size = {}
 
     # Обработка каждой группы ребер с одинаковым размером эмбеддинга
-    for embedding_size, group in embedding_size_groups.items():
-        embeddings = np.array([edge.embedding for edge in group])
+    for embedding_size, emb_group in embedding_size_groups.items():
 
         # Вычисление попарных расстояний в зависимости от метрики
         if metric == "cosine":
-            distances = cosine_distances(embeddings)
+            distances = cosine_distances(emb_group)
         elif metric == "euclidean":
-            distances = euclidean_distances(embeddings)
+            distances = euclidean_distances(emb_group)
         else:
             raise ValueError(
                 f"Unsupported metric: {metric}. Use 'cosine' or 'euclidean'."
@@ -646,26 +687,35 @@ def analyze_distance_distributions(
 
 
 def plot_clusters_with_pca(
-    edges: List[Dict], matching: Dict[int, Dict[str, str]]
+    unique_edges_embeddings: List[np.ndarray],
+    unique_edges_labels: List[str],
+    matching: Dict[int, Dict[str, str]],
 ) -> None:
     """
     Строит интерактивные графики кластеров для каждого размера эмбеддингов.
     Использует PCA для уменьшения размерности до 2D.
 
     Args:
-        edges: Список объектов Edge, каждый из которых содержит поля `.label`, `.embedding`.
+        unique_edges_embeddings: Список уникальных эмбеддингов (np.ndarray).
+        unique_edges_labels: Список соответствующих меток ребер (str).
         matching: Вложенный словарь матчинга:
-                  - Первый уровень: размер эмбеддингов (int).
-                  - Второй уровень: словарь, где ключ — это метка ребра (поле .label),
+                  - Первый уровень: размер эмbedding'ов (int).
+                  - Второй уровень: словарь, где ключ — это метка ребра,
                     а значение — метка центрального ребра для данного кластера.
     """
-    # Группировка ребер по размеру эмбеддинга
-    embedding_size_groups = defaultdict(list)
-    for edge in edges:
-        embedding_size = len(edge.embedding)
-        embedding_size_groups[embedding_size].append(edge)
+    # Проверка, что длина списков совпадает
+    if len(unique_edges_embeddings) != len(unique_edges_labels):
+        raise ValueError(
+            "unique_edges_embeddings and unique_edges_labels must have the same length."
+        )
 
-    # Обработка каждой группы ребер с одинаковым размером эмбеддинга
+    # Группировка эмbedding'ов по их размеру
+    embedding_size_groups = defaultdict(list)
+    for emb, label in zip(unique_edges_embeddings, unique_edges_labels):
+        embedding_size = len(emb)
+        embedding_size_groups[embedding_size].append((emb, label))
+
+    # Обработка каждой группы эмbedding'ов с одинаковым размером
     for embedding_size, group in embedding_size_groups.items():
         if embedding_size not in matching:
             print(
@@ -674,14 +724,14 @@ def plot_clusters_with_pca(
             continue
 
         # Извлечение данных
-        embeddings = np.array([edge.embedding for edge in group])
-        labels = [edge.label for edge in group]  # Метки ребер
+        embeddings = np.array([item[0] for item in group])  # Эмbedding'и
+        labels = [item[1] for item in group]  # Метки ребер
 
         # Применение PCA для уменьшения размерности до 2D
         pca = PCA(n_components=2)
         embeddings_2d = pca.fit_transform(embeddings)
 
-        # Получение матчинга для текущего размера эмбеддингов
+        # Получение матчинга для текущего размера эмbedding'ов
         size_matching = matching[embedding_size]
 
         # Создание цветовой палитры для кластеров

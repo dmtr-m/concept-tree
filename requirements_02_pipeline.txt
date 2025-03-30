@@ -6,6 +6,6 @@ numpy
 spacy
 # embeddings/cc.en.100.bin
 fasttext
-sklearn
+scikit-learn
 plotly
 nbformat

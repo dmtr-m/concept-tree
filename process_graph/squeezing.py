@@ -49,7 +49,7 @@ def squeeze_by_dict(embeddings: dict[str, np.typing.ArrayLike], similarity_thres
     word_to_cluster = {}
     visited = set()
 
-    sorted_words = sorted(embeddings.keys())
+    sorted_words = sorted(embeddings.keys(), reverse=True)
 
     for word1 in sorted_words:
         if word1 in visited:

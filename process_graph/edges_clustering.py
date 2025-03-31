@@ -473,6 +473,8 @@ def grid_search_cluster_params(
                         metric_name: -np.inf if "Index" in metric_name else 1.0
                         for metric_name in metric_weights
                     }
+                    print("Not enough clusters to compute metrics.")
+                    continue
 
                 # Проверка на наличие бесконечных значений
                 if any(value is None or np.isinf(value) for value in metrics.values()):

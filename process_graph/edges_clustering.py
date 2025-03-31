@@ -34,29 +34,43 @@ from scipy.sparse import csr_matrix
 from tqdm import tqdm
 
 
-def extract_unique_sorted_embeddings(edges: List[Edge]) -> List[List[float]]:
+def extract_unique_sorted_embeddings(
+    edges: List[Edge],
+) -> Dict[int, Tuple[List[List[float]], List[str]]]:
     """
-    Извлекает эмбеддинги с уникальными label и сортирует их лексикографически по label.
+    Извлекает эмбеддинги с уникальными label, группирует их по размерности эмбеддингов
+    и сортирует лексикографически по label.
 
     Args:
         edges: Список объектов Edge, каждый из которых содержит поля `embedding` и `label`.
 
     Returns:
-        Список эмбеддингов, отсортированный лексикографически по label.
+        Словарь, где ключ — это размерность эмбеддингов, а значение — кортеж:
+        - Список эмбеддингов этой размерности.
+        - Список соответствующих лейблов (отсортированных лексикографически).
     """
-    # Группировка ребер по label (только уникальные label)
-    unique_labels = {}
+    # Группировка ребер по размерности эмбеддингов
+    embedding_size_groups = defaultdict(dict)
+
     for edge in edges:
-        if edge.label not in unique_labels:
-            unique_labels[edge.label] = edge
+        embedding_size = len(edge.embedding)
+        if edge.label not in embedding_size_groups[embedding_size]:
+            embedding_size_groups[embedding_size][edge.label] = edge
 
-    # Сортировка label лексикографически
-    sorted_labels = sorted(unique_labels.keys())
+    # Создание результирующего словаря
+    result = {}
 
-    # Извлечение эмбеддингов в порядке отсортированных label
-    sorted_embeddings = [unique_labels[label].embedding for label in sorted_labels]
+    for embedding_size, label_to_edge in embedding_size_groups.items():
+        # Сортировка лейблов лексикографически
+        sorted_labels = sorted(label_to_edge.keys())
 
-    return sorted_labels, sorted_embeddings
+        # Извлечение эмбеддингов в порядке отсортированных лейблов
+        sorted_embeddings = [label_to_edge[label].embedding for label in sorted_labels]
+
+        # Сохранение результатов для текущей размерности
+        result[embedding_size] = (sorted_embeddings, sorted_labels)
+
+    return result
 
 
 def cluster_and_evaluate_all_sizes(

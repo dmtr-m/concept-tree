@@ -30,6 +30,8 @@ from sklearn.preprocessing import normalize
 
 from scipy.sparse import csr_matrix
 
+from tqdm import tqdm
+
 
 def extract_unique_sorted_embeddings(edges: List[Edge]) -> List[List[float]]:
     """
@@ -92,7 +94,7 @@ def cluster_and_evaluate_all_sizes(
     all_matching = {}
 
     # Обработка каждой группы эмбеддингов с одинаковым размером
-    for embedding_size, group in embedding_size_groups.items():
+    for embedding_size, group in tqdm(embedding_size_groups.items()):
         embeddings = np.array([item[0] for item in group])  # Эмбеддинги
         edge_ids = [item[1] for item in group]  # Идентификаторы
 
@@ -328,12 +330,12 @@ def grid_search_cluster_params(
         best_metrics = None
 
         # Перебор всех моделей и их параметров
-        for model_name, param_grid in model_param_grid.items():
+        for model_name, param_grid in tqdm(model_param_grid.items()):
             # Генерация всех комбинаций параметров для текущей модели
             keys, values = zip(*param_grid.items())
             param_combinations = [dict(zip(keys, v)) for v in product(*values)]
 
-            for params in param_combinations:
+            for params in tqdm(param_combinations):
                 # Создание модели с текущими параметрами
                 try:
                     if model_name == "DBSCAN":
@@ -500,6 +502,7 @@ def grid_search_cluster_params(
                 if aggregated_score > best_aggregated_score:
                     best_aggregated_score = aggregated_score
                     best_params = {"model": model_name, "params": params}
+                    print(f"Best params: {best_params}")
                     best_metrics = metrics
 
         # Сохранение результатов

@@ -17,6 +17,7 @@ from sklearn.metrics import (
     calinski_harabasz_score,
 )
 from sklearn.preprocessing import normalize
+from sklearn.preprocessing import StandardScaler
 
 from itertools import product
 from collections import defaultdict, Counter
@@ -272,34 +273,22 @@ def grid_search_cluster_params(
     unique_edges_ebs: List[np.ndarray],
     embedding_sizes: List[int],
     model_param_grid: Dict[str, Dict[str, list]],
-    metric_weights: Dict[str, float] = None,
     standardize: bool = False,  # Флаг для нормализации эмбеддингов
 ) -> Tuple[Dict[int, Dict[str, float]], Dict[int, Dict[str, float]]]:
     """
     Выполняет Grid Search для выбора оптимальных параметров кластеризации
     с учетом нескольких метрик для каждой размерности эмбеддингов.
     Args:
-        edges: Список объектов Edge, каждый из которых содержит поле `embedding`.
+        unique_edges_ebs: Список эмбеддингов ребер.
         embedding_sizes: Список размерностей эмбеддингов.
         model_param_grid: Словарь, где ключи — названия моделей, а значения — словари параметров для перебора.
                           Пример: {"DBSCAN": {"eps": [0.3, 0.5], "min_samples": [2, 5], "metric": ["cosine", "euclidean"]}}
-        metric_weights: Веса для каждой метрики (по умолчанию все метрики равнозначны).
         standardize: Флаг для нормализации эмбеддингов по евклидовой норме.
     Returns:
         Кортеж из двух элементов:
             1. Словарь оптимальных параметров для каждой размерности.
             2. Словарь исходных метрик для каждой размерности.
     """
-    if metric_weights is None:
-        metric_weights = {
-            "Silhouette Score": 2.0,
-            "Davies-Bouldin Index": -1.0,  # Минимизация
-            "Calinski-Harabasz Index": 1.0,
-            "Dunn Index": 1.0,
-            "Connectivity Score": -1.0,  # Минимизация
-            "Intra-Cluster Variance": -1.0,  # Минимизация
-        }
-
     # Группировка ребер по размеру эмбеддинга
     embedding_size_groups = defaultdict(list)
     for edge_emb in unique_edges_ebs:
@@ -317,31 +306,26 @@ def grid_search_cluster_params(
             )
             continue
 
-        # Выбираем только ребра с текущей размерностью эмбеддинга
         embeddings = np.array(embedding_size_groups[embedding_size])
-        # embeddings = np.array([edge.embedding for edge in filtered_edges])
 
         # Нормализация эмбеддингов, если флаг standardize=True
         if standardize:
             embeddings = normalize(embeddings, norm="l2", axis=1)
 
-        best_aggregated_score = -np.inf
-        best_params = None
-        best_metrics = None
+        # Словарь для хранения метрик для всех комбинаций параметров
+        all_metrics = []
 
         # Перебор всех моделей и их параметров
         for model_name, param_grid in tqdm(model_param_grid.items()):
-            # Генерация всех комбинаций параметров для текущей модели
             keys, values = zip(*param_grid.items())
             param_combinations = [dict(zip(keys, v)) for v in product(*values)]
 
             for params in tqdm(param_combinations):
-                # Создание модели с текущими параметрами
                 try:
+                    # Создание модели с текущими параметрами
                     if model_name == "DBSCAN":
                         model = DBSCAN(**params)
                     elif model_name == "AgglomerativeClustering":
-                        # Если connectivity есть в параметрах, используем его
                         if "connectivity" in params:
                             connectivity_matrix_dict = params.pop("connectivity")
                             if connectivity_matrix_dict is not None:
@@ -361,7 +345,7 @@ def grid_search_cluster_params(
                     # Обучение модели
                     labels = model.fit_predict(embeddings)
                 except Exception as e:
-                    print(e)
+                    print(f"Ошибка при обучении модели: {e}")
                     continue
 
                 # Вычисление метрик
@@ -371,145 +355,169 @@ def grid_search_cluster_params(
                 )  # Исключаем шумовые точки (-1)
 
                 if len(unique_labels) > 1:
-                    for metric_name in metric_weights.keys():
-                        try:
-                            if metric_name == "Silhouette Score":
-                                metrics[metric_name] = silhouette_score(
-                                    embeddings,
-                                    labels,
-                                    metric=params.get("metric", "cosine"),
-                                )
-                            elif metric_name == "Davies-Bouldin Index":
-                                metrics[metric_name] = davies_bouldin_score(
-                                    embeddings, labels
-                                )
-                            elif metric_name == "Calinski-Harabasz Index":
-                                metrics[metric_name] = calinski_harabasz_score(
-                                    embeddings, labels
-                                )
-                            elif metric_name == "Dunn Index":
+                    try:
+                        metrics["Silhouette Score"] = silhouette_score(
+                            embeddings, labels, metric="euclidean"
+                        )
+                        metrics["Davies-Bouldin Index"] = davies_bouldin_score(
+                            embeddings, labels
+                        )
+                        metrics["Calinski-Harabasz Index"] = calinski_harabasz_score(
+                            embeddings, labels
+                        )
 
-                                def dunn_index(embeddings, labels):
-                                    intra_cluster_dists = []
-                                    inter_cluster_dists = []
-                                    for label in unique_labels:
-                                        cluster_points = embeddings[labels == label]
-                                        if len(cluster_points) > 1:
-                                            dists = euclidean_distances(
-                                                cluster_points
-                                            ).max()
-                                            intra_cluster_dists.append(dists)
-                                    for i, label1 in enumerate(unique_labels):
-                                        for label2 in unique_labels[i + 1 :]:
-                                            cluster1 = embeddings[labels == label1]
-                                            cluster2 = embeddings[labels == label2]
-                                            dists = euclidean_distances(
-                                                cluster1, cluster2
-                                            ).min()
-                                            inter_cluster_dists.append(dists)
-                                    if (
-                                        not intra_cluster_dists
-                                        or not inter_cluster_dists
-                                    ):
-                                        return None
-                                    max_intra = max(intra_cluster_dists)
-                                    min_inter = min(inter_cluster_dists)
-                                    return min_inter / max_intra
+                        # Dunn Index
+                        def dunn_index(embeddings, labels):
+                            intra_cluster_dists = []
+                            inter_cluster_dists = []
+                            for label in unique_labels:
+                                cluster_points = embeddings[labels == label]
+                                if len(cluster_points) > 1:
+                                    dists = euclidean_distances(cluster_points).max()
+                                    intra_cluster_dists.append(dists)
+                            for i, label1 in enumerate(unique_labels):
+                                for label2 in unique_labels[i + 1 :]:
+                                    cluster1 = embeddings[labels == label1]
+                                    cluster2 = embeddings[labels == label2]
+                                    dists = euclidean_distances(
+                                        cluster1, cluster2
+                                    ).min()
+                                    inter_cluster_dists.append(dists)
+                            if not intra_cluster_dists or not inter_cluster_dists:
+                                return None
+                            max_intra = max(intra_cluster_dists)
+                            min_inter = min(inter_cluster_dists)
+                            return min_inter / max_intra
 
-                                metrics[metric_name] = dunn_index(embeddings, labels)
-                            elif metric_name == "Connectivity Score":
+                        metrics["Dunn Index"] = dunn_index(embeddings, labels)
 
-                                def connectivity_score(
-                                    embeddings, labels, n_neighbors=10
-                                ):
-                                    dist_matrix = euclidean_distances(embeddings)
-                                    sorted_indices = np.argsort(dist_matrix, axis=1)[
-                                        :, 1 : n_neighbors + 1
-                                    ]
-                                    score = 0
-                                    for i, neighbors in enumerate(sorted_indices):
-                                        for j in neighbors:
-                                            if labels[i] != labels[j]:
-                                                score += 1
-                                    return score / (len(embeddings) * n_neighbors)
+                        # Connectivity Score
+                        def connectivity_score(embeddings, labels, n_neighbors=10):
+                            dist_matrix = euclidean_distances(embeddings)
+                            sorted_indices = np.argsort(dist_matrix, axis=1)[
+                                :, 1 : n_neighbors + 1
+                            ]
+                            score = 0
+                            for i, neighbors in enumerate(sorted_indices):
+                                for j in neighbors:
+                                    if labels[i] != labels[j]:
+                                        score += 1
+                            return score / (len(embeddings) * n_neighbors)
 
-                                metrics[metric_name] = connectivity_score(
-                                    embeddings, labels
+                        metrics["Connectivity Score"] = connectivity_score(
+                            embeddings, labels
+                        )
+
+                        # Intra-Cluster Variance
+                        intra_variance = []
+                        for label in unique_labels:
+                            cluster_points = embeddings[labels == label]
+                            if len(cluster_points) > 0:
+                                center = cluster_points.mean(axis=0)
+                                variance = (
+                                    ((cluster_points - center) ** 2).sum(axis=1).mean()
                                 )
-                            elif metric_name == "Intra-Cluster Variance":
-                                intra_variance = []
-                                for label in unique_labels:
-                                    cluster_points = embeddings[labels == label]
-                                    if len(cluster_points) > 0:
-                                        center = cluster_points.mean(axis=0)
-                                        variance = (
-                                            ((cluster_points - center) ** 2)
-                                            .sum(axis=1)
-                                            .mean()
-                                        )
-                                        intra_variance.append(variance)
-                                metrics[metric_name] = (
-                                    np.mean(intra_variance) if intra_variance else None
-                                )
-                            elif metric_name == "Noise Ratio":
-                                # Noise Ratio только для DBSCAN
-                                if model_name == "DBSCAN":
-                                    noise_ratio = sum(
-                                        1 for label in labels if label == -1
-                                    ) / len(labels)
-                                    metrics[metric_name] = noise_ratio
-                                else:
-                                    metrics[metric_name] = (
-                                        0  # Для AgglomerativeClustering всегда 0
-                                    )
-                            else:
-                                metrics[metric_name] = None  # Неизвестная метрика
-                        except Exception as e:
-                            print(f"Metrics eval exception: {e}")
-                            metrics[metric_name] = None  # Ошибка при вычислении метрики
+                                intra_variance.append(variance)
+                        metrics["Intra-Cluster Variance"] = (
+                            np.mean(intra_variance) if intra_variance else None
+                        )
+
+                    except Exception as e:
+                        print(f"Metrics eval exception: {e}")
+                        metrics = {
+                            key: None
+                            for key in [
+                                "Silhouette Score",
+                                "Davies-Bouldin Index",
+                                "Calinski-Harabasz Index",
+                                "Dunn Index",
+                                "Connectivity Score",
+                                "Intra-Cluster Variance",
+                            ]
+                        }
                 else:
                     # Если только один кластер или все точки — шум
                     metrics = {
-                        metric_name: -np.inf if "Index" in metric_name else 1.0
-                        for metric_name in metric_weights
+                        "Silhouette Score": -np.inf,
+                        "Davies-Bouldin Index": np.inf,
+                        "Calinski-Harabasz Index": -np.inf,
+                        "Dunn Index": -np.inf,
+                        "Connectivity Score": np.inf,
+                        "Intra-Cluster Variance": np.inf,
                     }
-                    print("Not enough clusters to compute metrics.")
-                    continue
+                    print("*Unable to compute metrics, only 1 cluster*")
 
-                # Проверка на наличие бесконечных значений
-                if any(value is None or np.isinf(value) for value in metrics.values()):
-                    print(
-                        f"Embedding size {embedding_size}, model={model_name}, params={params}: "
-                        "Skipping due to infinite or undefined metric values."
-                    )
-                    for key in metrics:
-                        if metrics[key] is None or np.isinf(metrics[key]):
-                            print(f"*Undefined value for {key} metric*")
-                    continue
+                # Добавляем метрики и параметры в общий список
+                all_metrics.append(
+                    {
+                        "params": {"model": model_name, "params": params},
+                        "metrics": metrics,
+                    }
+                )
 
-                # Нормализация метрик и вычисление агрегированной метрики
-                aggregated_score = 0.0
-                for metric_name, weight in metric_weights.items():
-                    value = metrics[metric_name]
-                    if value is None:
-                        continue  # Пропускаем метрики, которые не удалось вычислить
-                    if metric_name in [
-                        "Davies-Bouldin Index",
-                        "Noise Ratio",
-                        "Intra-Cluster Variance",
-                        "Connectivity Score",
-                    ]:
-                        normalized_value = 1 / (1 + value + 0.001)  # Минимизация
-                    else:
-                        normalized_value = value / (1 + value + 0.001)  # Максимизация
-                    aggregated_score += weight * normalized_value
+        # Проверка, есть ли данные для нормализации
+        if not all_metrics:
+            print(
+                f"Embedding size {embedding_size}: No valid parameter combinations found."
+            )
+            continue
 
-                # Обновление лучших параметров
-                if aggregated_score > best_aggregated_score:
-                    best_aggregated_score = aggregated_score
-                    best_params = {"model": model_name, "params": params}
-                    print(f"Best params: {best_params}")
-                    best_metrics = metrics
+        # Z-нормализация метрик
+        metric_names = [
+            "Silhouette Score",
+            "Davies-Bouldin Index",
+            "Calinski-Harabasz Index",
+            "Dunn Index",
+            "Connectivity Score",
+            "Intra-Cluster Variance",
+        ]
+
+        # Определяем направления метрик (большие или маленькие значения лучше)
+        metric_directions = {
+            "Silhouette Score": 1,  # Большие значения лучше
+            "Davies-Bouldin Index": -1,  # Маленькие значения лучше
+            "Calinski-Harabasz Index": 1,  # Большие значения лучше
+            "Dunn Index": 1,  # Большие значения лучше
+            "Connectivity Score": -1,  # Маленькие значения лучше
+            "Intra-Cluster Variance": -1,  # Маленькие значения лучше
+        }
+
+        for metric_name in metric_names:
+            metric_values = [
+                m["metrics"][metric_name]
+                for m in all_metrics
+                if m["metrics"][metric_name] is not None
+            ]
+            if metric_values:
+                scaler = StandardScaler()
+                normalized_values = scaler.fit_transform(
+                    np.array(metric_values).reshape(-1, 1)
+                ).flatten()
+
+                # Умножаем нормализованные значения на направление метрики
+                direction = metric_directions[metric_name]
+                normalized_values *= direction
+
+                # Заменяем исходные значения на нормализованные
+                idx = 0
+                for m in all_metrics:
+                    if m["metrics"][metric_name] is not None:
+                        m["metrics"][metric_name] = normalized_values[idx]
+                        idx += 1
+
+        # Вычисление среднего арифметического нормализованных значений
+        best_aggregated_score = -np.inf
+        best_params = None
+        best_metrics = None
+
+        for m in all_metrics:
+            aggregated_score = np.mean(
+                [value for value in m["metrics"].values() if value is not None]
+            )
+            if aggregated_score > best_aggregated_score:
+                best_aggregated_score = aggregated_score
+                best_params = m["params"]
+                best_metrics = m["metrics"]
 
         # Сохранение результатов
         if best_params is not None:

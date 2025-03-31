@@ -465,6 +465,7 @@ def grid_search_cluster_params(
                             else:
                                 metrics[metric_name] = None  # Неизвестная метрика
                         except Exception as e:
+                            print(f"Metrics eval exception: {e}")
                             metrics[metric_name] = None  # Ошибка при вычислении метрики
                 else:
                     # Если только один кластер или все точки — шум
@@ -479,6 +480,9 @@ def grid_search_cluster_params(
                         f"Embedding size {embedding_size}, model={model_name}, params={params}: "
                         "Skipping due to infinite or undefined metric values."
                     )
+                    for key in metrics:
+                        if metrics[key] is None or np.isinf(metrics[key]):
+                            print(f"*Undefined value for {key} metric*")
                     continue
 
                 # Нормализация метрик и вычисление агрегированной метрики

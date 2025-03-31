@@ -544,7 +544,7 @@ def compute_connectivity_matrix(
 ) -> Dict[int, csr_matrix]:
     connectivity_matrices = {}
 
-    for emb_size in embedding_sizes:
+    for emb_size in tqdm(embedding_sizes):
         filtered_edges = [edge for edge in edges if len(edge.embedding) == emb_size]
         if not filtered_edges:
             print(f"Warning: No edges found for embedding size {emb_size}. Skipping.")
@@ -563,7 +563,7 @@ def compute_connectivity_matrix(
 
         if matrix_type == "adjacency":
             # Матрица на основе смежности ребер
-            for i, label1 in enumerate(unique_labels):
+            for i, label1 in tqdm(enumerate(unique_labels)):
                 for j, label2 in enumerate(unique_labels):
                     edges1 = label_to_edges[label1]
                     edges2 = label_to_edges[label2]

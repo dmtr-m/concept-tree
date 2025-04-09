@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 import spacy
 
 embeddings_dict = np.load(
-    "embeddings/english_lit_SVD_dict.npy", allow_pickle=True
+    "embeddings/english_newnewsentencelit_cbow_100_min_df=3_dict.npy", allow_pickle=True
 ).item()
 embeddings_shape = None
 for value in embeddings_dict.values():
@@ -77,8 +77,8 @@ def get_embedding(words: list[str]) -> NDArray[np.float64]:
             embeddings = [
                 (
                     embeddings_dict[word]
-                    if word in embeddings_dict
-                    else np.zeros((embeddings_shape))
+                    # if word in embeddings_dict
+                    # else np.zeros((embeddings_shape))
                 )
                 for word in sorted_words
             ]

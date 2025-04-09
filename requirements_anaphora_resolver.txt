@@ -1,0 +1,7 @@
+numpy==1.26.4
+spacy==3.5
+spacy-transformers
+coreferee
+# python -m spacy download en_core_web_trf
+# python -m spacy download en_core_web_lg
+# python -m coreferee install en

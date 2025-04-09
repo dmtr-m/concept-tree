@@ -1,0 +1,11 @@
+# download en_core_web_lg model
+# download en_core_web_trf model
+spacy-transformers
+torch
+transformers
+spacy
+# download popular
+nltk
+ipykernel
+tqdm
+pandas  

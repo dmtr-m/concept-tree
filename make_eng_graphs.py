@@ -198,7 +198,7 @@ for chunk in doc.noun_chunks:
     chunk_to_vertex[chunk.root.lower] = vertex
 
 # Получаем синтаксические связи с помощью get_syntactic_relations
-relations = get_syntactic_relations(doc)
+relations = get_syntactic_relations(doc, lemmatizer)
 print('RELATIONS', relations)
 # Добавляем рёбра в граф
 for relation in relations:

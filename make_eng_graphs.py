@@ -1,6 +1,5 @@
 import spacy
 import spacy.cli
-import spacy_experimental
 from nltk.stem import WordNetLemmatizer
 from graph.higher_dim_graph import Graph
 from graph.graph import visualize_graph
@@ -11,48 +10,6 @@ from graph.vertex import Vertex
 # spacy.cli.download("en_core_web_lg")
 nlp = spacy.load("en_core_web_lg")
 lemmatizer = WordNetLemmatizer()
-
-
-def resolve_anaphora(text):
-    """
-    Разрешает анафору в тексте, заменяя местоимения на их референты.
-    """
-    doc = nlp(text)
-    resolved_text = text
-
-    print("Coreference clusters:")
-    print(doc.spans.get("coref_clusters", []))
-
-    coref_map = {}  # Словарь замен
-
-    # Обрабатываем кластеры coreference resolution
-    for cluster in doc.spans.get("coref_clusters", []):
-        main_mention = cluster[0].text  # Главный референт
-        for mention in cluster[1:]:
-            if mention.text.lower() in {"it", "this", "that", "they", "those"}:
-                print(f"Replacing '{mention.text}' with '{main_mention}'")
-                coref_map[mention.text] = main_mention  # Добавляем в словарь замен
-
-    # Принудительная замена "that", если оно осталось в тексте
-    for pronoun in {"it", "this", "that", "they", "those"}:
-        if pronoun in resolved_text:
-            nearest_noun = find_nearest_noun(doc, pronoun)
-            if nearest_noun:
-                print(f"Forcing replacement of '{pronoun}' with '{nearest_noun}'")
-                resolved_text = resolved_text.replace(pronoun, nearest_noun)
-
-    return resolved_text
-
-def find_nearest_noun(doc, pronoun):
-    """
-    Ищет ближайшее существительное слева от местоимения.
-    """
-    for token in doc:
-        if token.text.lower() == pronoun:
-            for left in reversed(list(token.lefts)):
-                if left.pos_ in {"NOUN", "PROPN"}:
-                    return left.text
-    return None  # Если не найдено существительное, не заменяем
 
 def get_syntactic_relations(doc):
     """
@@ -80,6 +37,16 @@ def get_syntactic_relations(doc):
 
             if head_text and conj_text:
                 conjunctions.setdefault(head_text, []).append(conj_text)
+
+    # Обрабатываем союзы для существительных
+    for token in doc:
+        if token.dep_ == "conj" and token.head.pos_ == "NOUN":
+            head_text = chunk_to_text.get(token.head, token.head.text.lower())
+            conj_text = chunk_to_text.get(token, token.text.lower())
+
+            # Добавляем рёбра для сочинённых существительных
+            relations.append((head_text, "and", conj_text))
+            print(f"Adding conjunction edge: {head_text} --[and]--> {conj_text}")
 
     # Добавляем подлежащие
     for chunk in chunks:
@@ -146,9 +113,6 @@ def get_syntactic_relations(doc):
                     relations.append((subject, prep_text, object_text))
                     print(f"Adding edge: {subject} --[{prep_text}]--> {object_text}")
 
-    # Удаляем связи, где субъект "that"
-    relations = [rel for rel in relations if rel[0] != "that"]
-
     return relations
 
 
@@ -177,6 +141,13 @@ def process_token(token, graph, chunk_to_vertex, conjunctions):
             edge_tuples = [(head_vertex.concept, child_vertex.concept, token.text)]
             print(f"Processing preposition edge: {head_vertex.concept} --[{token.text}]--> {child_vertex.concept}")
 
+            # Добавляем союзы между существительными
+            if head_vertex.concept in conjunctions:
+                conj_list = conjunctions[head_vertex.concept]
+                print(f"Found conjunctions for {head_vertex.concept}: {conj_list}")
+                for conj in conj_list:
+                    graph.add_edge(conj, child_vertex.concept, token.text, 1, 0)
+
             # Проверяем, есть ли у существительного сочинённые элементы
             if head_vertex.concept in conjunctions:
                 conj_list = conjunctions[head_vertex.concept]
@@ -196,19 +167,18 @@ def process_token(token, graph, chunk_to_vertex, conjunctions):
         process_token(child, graph, chunk_to_vertex, conjunctions)
 
 # Тестирование на предложении
-text = """How are living organisms different from inanimate matter? There are obvious answers in terms
-of the chemical composition and structure, but when it comes to the central processes in the evolution
-of life, the distinction is far less obvious. In the tradition of Darwin-Wallace, it is tempting to
-posit that life is defined by evolution through the survival of the fittest. However, the
-uniqueness of this process to life could be questioned because the entire history of the universe
-consists of changes where the most stable structures survive. The process of
-replication itself is not truly unique to biology either: crystals do replicate. On the macroscopic
-scales of space and time, however, life clearly is a distinct phenomenon. To objectively define
-the features that distinguish life from other phenomena that occur mostly in the universe, it seems
-important to examine the key processes of biological evolution within the framework of
-theoretical physics."""
-# text = 'The cat and the dog eat fish and meat. The elephant and the bear on the mat. The monkey on the table and under the roof.'
-text = resolve_anaphora(text)
+# text = """How are living organisms different from inanimate matter? There are obvious answers in terms
+# of the chemical composition and structure, but when it comes to the central processes in the evolution
+# of life, the distinction is far less obvious. In the tradition of Darwin-Wallace, it is tempting to
+# posit that life is defined by evolution through the survival of the fittest. However, the
+# uniqueness of this process to life could be questioned because the entire history of the universe
+# consists of changes where the most stable structures survive. The process of
+# replication itself is not truly unique to biology either: crystals do replicate. On the macroscopic
+# scales of space and time, however, life clearly is a distinct phenomenon. To objectively define
+# the features that distinguish life from other phenomena that occur mostly in the universe, it seems
+# important to examine the key processes of biological evolution within the framework of
+# theoretical physics."""
+text = 'The cat and the dog eat fish and meat. The elephant and the bear on the mat. The monkey on the table and under the roof.'
 doc = nlp(text)
 
 graph1 = Graph()
@@ -217,12 +187,7 @@ conjunctions = {}
 
 # Добавляем вершины только для именных групп (исключаем глаголы и наречия)
 for chunk in doc.noun_chunks:
-    concept = chunk.text.lower()
-    if concept in {"it", "this", "that", "they", "those"}:  # Фильтр неопределённых местоимений
-        print(f"Skipping vertex: {concept}")
-        continue
-
-    vertex = Vertex(concept, [chunk.text.lower()])
+    vertex = Vertex(chunk.text.lower(), [chunk.text.lower()])
     
     # Проверяем, существует ли вершина с таким концептом
     if vertex.concept not in graph1.vertices:
@@ -269,3 +234,5 @@ for concept in graph_res.vertices.keys():
     print(graph_res.vertices[concept])
 
 visualize_graph(graph_res)
+
+# TODO resolve anaphora, adding conj edge, process conjunction

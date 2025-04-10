@@ -1,15 +1,11 @@
 import numpy as np
-import random
 from numpy.typing import NDArray
 import spacy
+import fasttext
 
-embeddings_dict = np.load(
-    "embeddings/english_newnewsentencelit_cbow_100_min_df=3_dict.npy", allow_pickle=True
-).item()
-embeddings_shape = None
-for value in embeddings_dict.values():
-    embeddings_shape = value.shape
-    break
+
+ft = fasttext.load_model("embeddings/cc.en.100.bin")
+embeddings_shape = ft.get_word_vector("apple").shape
 
 # Load the English NLP model from spaCy
 nlp = spacy.load("en_core_web_sm")
@@ -68,21 +64,18 @@ def get_embedding(words: list[str]) -> NDArray[np.float64]:
     try:
         if len(words) == 1:
             return (
-                embeddings_dict[words[0]]
-                if words[0] in embeddings_dict
-                else np.zeros(embeddings_shape)
+                ft.get_word_vector(words[0])
             )
         else:
             sorted_words = reorder_ngram(" ".join(words))
             embeddings = [
                 (
-                    embeddings_dict[word]
-                    if word in embeddings_dict
-                    else np.zeros((embeddings_shape))
+                    ft.get_word_vector(word)
                 )
                 for word in sorted_words
             ]
             return np.concatenate(embeddings)  # Final concatenated embedding
     except Exception as e:
-        raise ValueError(f"Failed to generate embedding for words: {words}: {e}") from e
+        raise ValueError(
+            f"Failed to generate embedding for words: {words}: {e}") from e
         # return np.random.rand(3) / 10

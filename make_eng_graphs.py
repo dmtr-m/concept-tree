@@ -167,18 +167,18 @@ def process_token(token, graph, chunk_to_vertex, conjunctions):
         process_token(child, graph, chunk_to_vertex, conjunctions)
 
 # Тестирование на предложении
-# text = """How are living organisms different from inanimate matter? There are obvious answers in terms
-# of the chemical composition and structure, but when it comes to the central processes in the evolution
-# of life, the distinction is far less obvious. In the tradition of Darwin-Wallace, it is tempting to
-# posit that life is defined by evolution through the survival of the fittest. However, the
-# uniqueness of this process to life could be questioned because the entire history of the universe
-# consists of changes where the most stable structures survive. The process of
-# replication itself is not truly unique to biology either: crystals do replicate. On the macroscopic
-# scales of space and time, however, life clearly is a distinct phenomenon. To objectively define
-# the features that distinguish life from other phenomena that occur mostly in the universe, it seems
-# important to examine the key processes of biological evolution within the framework of
-# theoretical physics."""
-text = 'The cat and the dog eat fish and meat. The elephant and the bear on the mat. The monkey on the table and under the roof.'
+text = """How are living organisms different from inanimate matter? There are obvious answers in terms
+of the chemical composition and structure, but when it comes to the central processes in the evolution
+of life, the distinction is far less obvious. In the tradition of Darwin-Wallace, it is tempting to
+posit that life is defined by evolution through the survival of the fittest. However, the
+uniqueness of this process to life could be questioned because the entire history of the universe
+consists of changes where the most stable structures survive. The process of
+replication itself is not truly unique to biology either: crystals do replicate. On the macroscopic
+scales of space and time, however, life clearly is a distinct phenomenon. To objectively define
+the features that distinguish life from other phenomena that occur mostly in the universe, it seems
+important to examine the key processes of biological evolution within the framework of
+theoretical physics."""
+# text = 'The cat and the dog eat fish and meat. The elephant and the bear on the mat. The monkey on the table and under the roof.'
 doc = nlp(text)
 
 graph1 = Graph()

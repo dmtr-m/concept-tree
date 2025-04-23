@@ -66,7 +66,10 @@ def squeeze_by_dict(embeddings: dict[str, np.typing.ArrayLike], similarity_thres
             vec1 = embeddings[word1]
             vec2 = embeddings[word2]
 
-            distance = np.linalg.norm(vec1 - vec2)  # Calculate the distance between the two embeddings
+            try:
+                distance = np.linalg.norm(vec1 - vec2)  # Calculate the distance between the two embeddings
+            except:
+                print(f"Failed to calculate distance for: {(word1, len(vec1))}, {(word2, len(vec2))}")
             
             if distance < similarity_threshold:
                 visited.add(word2)
